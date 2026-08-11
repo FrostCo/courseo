@@ -1,15 +1,18 @@
-import type {
-  ApiError,
-  Course,
-  CourseTreeResponse,
-  CreateLibraryRequest,
-  CreateShareRequest,
-  Library,
-  LibraryShare,
-  LoginRequest,
-  SetupRequest,
-  SetupStatus,
-  User,
+import {
+  encodePathForUrl,
+  type ApiError,
+  type Course,
+  type CourseTreeResponse,
+  type CreateLibraryRequest,
+  type CreateShareRequest,
+  type LessonProgress,
+  type Library,
+  type LibraryShare,
+  type LoginRequest,
+  type ProgressUpdateRequest,
+  type SetupRequest,
+  type SetupStatus,
+  type User,
 } from "@courseo/shared";
 
 export class ApiRequestError extends Error {
@@ -84,4 +87,17 @@ export const api = {
   courses: {
     tree: (id: number) => request<CourseTreeResponse>(`/api/courses/${id}/tree`),
   },
+  progress: {
+    update: (body: ProgressUpdateRequest) =>
+      request<LessonProgress>("/api/progress", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+  },
 };
+
+/** URL for streaming a course file; real slashes between encoded segments. */
+export function fileUrl(courseId: number, relPath: string): string {
+  return `/api/courses/${courseId}/files/${encodePathForUrl(relPath)}`;
+}

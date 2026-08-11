@@ -4,6 +4,7 @@ import type { User } from "@courseo/shared";
 import { api, ApiRequestError } from "./api.js";
 import { CourseBrowser } from "./components/CourseBrowser.js";
 import { CourseView } from "./components/CourseView.js";
+import { LessonView } from "./components/LessonView.js";
 import { Libraries } from "./components/Libraries.js";
 import { Login } from "./components/Login.js";
 import { Setup } from "./components/Setup.js";
@@ -72,6 +73,7 @@ export function App() {
               <Route path="/libraries" element={<Libraries user={auth.user} />} />
               <Route path="/libraries/:libraryId" element={<CourseBrowser />} />
               <Route path="/courses/:courseId" element={<CourseView />} />
+              <Route path="/courses/:courseId/lessons/*" element={<LessonView />} />
               <Route path="*" element={<Navigate to="/libraries" replace />} />
             </Routes>
           </main>

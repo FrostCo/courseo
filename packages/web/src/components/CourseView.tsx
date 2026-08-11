@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { CourseTreeNode, CourseTreeResponse } from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
+import { lessonLink } from "./LessonView.js";
 
 export function CourseView() {
   const courseId = Number(useParams().courseId);
@@ -42,30 +43,39 @@ export function CourseView() {
       {tree.children.length === 0 ? (
         <p className="tagline">No lessons found in this course folder.</p>
       ) : (
-        <TreeLevel nodes={tree.children} />
+        <TreeLevel nodes={tree.children} courseId={courseId} />
       )}
     </div>
   );
 }
 
-function TreeLevel({ nodes }: { nodes: CourseTreeNode[] }) {
+function TreeLevel({
+  nodes,
+  courseId,
+}: {
+  nodes: CourseTreeNode[];
+  courseId: number;
+}) {
   return (
     <ul className="tree">
       {nodes.map((node) =>
         node.kind === "dir" ? (
           <li key={node.path} className="tree-dir">
             <span className="tree-dir-name">{node.name}</span>
-            <TreeLevel nodes={node.children} />
+            <TreeLevel nodes={node.children} courseId={courseId} />
           </li>
         ) : (
           <li key={node.path} className="tree-lesson">
             <span className={`type-badge type-badge--${node.type}`}>
               {node.type}
             </span>
-            {/* Lesson viewers land next; names are inert for now. */}
-            <span className="tree-lesson-name" title={node.path}>
+            <Link
+              className="tree-lesson-name"
+              to={lessonLink(courseId, node)}
+              title={node.path}
+            >
               {node.name}
-            </span>
+            </Link>
             {node.subtitles && (
               <span className="tree-subtle">cc</span>
             )}
