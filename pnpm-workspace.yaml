@@ -1,2 +1,8 @@
 packages:
   - "packages/*"
+
+# Native/postinstall deps allowed to run build scripts
+onlyBuiltDependencies:
+  - argon2
+  - better-sqlite3
+  - esbuild
