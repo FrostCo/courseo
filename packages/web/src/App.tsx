@@ -71,8 +71,14 @@ export function App() {
           <main className="content">
             <Routes>
               <Route path="/libraries" element={<Libraries user={auth.user} />} />
-              <Route path="/libraries/:libraryId" element={<CourseBrowser />} />
-              <Route path="/courses/:courseId" element={<CourseView />} />
+              <Route
+                path="/libraries/:libraryId"
+                element={<CourseBrowser user={auth.user} />}
+              />
+              <Route
+                path="/courses/:courseId"
+                element={<CourseView user={auth.user} />}
+              />
               <Route path="/courses/:courseId/lessons/*" element={<LessonView />} />
               <Route path="*" element={<Navigate to="/libraries" replace />} />
             </Routes>

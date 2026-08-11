@@ -496,6 +496,71 @@ body {
   font-size: 0.875rem;
 }
 
+/* File management (admin) */
+
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.course-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.course-row .course-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  padding: 0 0.15rem;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85em;
+  opacity: 0.35;
+}
+
+li:hover > .icon-button,
+li:hover > .tree-dir-name > .icon-button,
+h3:hover > .icon-button,
+.icon-button:focus-visible {
+  opacity: 1;
+}
+
+.icon-button:hover {
+  color: var(--accent);
+}
+
+.rename-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.35rem;
+}
+
+.rename-form input {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.875rem;
+  min-width: 16rem;
+}
+
+.tree-dir-name .rename-form,
+.course-group-title .rename-form {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 /* Lesson page */
 
 .secondary-button {

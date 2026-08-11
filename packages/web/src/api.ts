@@ -9,6 +9,8 @@ import {
   type Library,
   type LibraryShare,
   type LoginRequest,
+  type MoveCourseRequest,
+  type MoveRequest,
   type ProgressUpdateRequest,
   type SetupRequest,
   type SetupStatus,
@@ -83,9 +85,21 @@ export const api = {
       post<{ ok: true }>(`/api/libraries/${id}/shares`, body),
     unshare: (id: number, userId: number) =>
       del<{ ok: true }>(`/api/libraries/${id}/shares/${userId}`),
+    authors: (id: number) => request<string[]>(`/api/libraries/${id}/authors`),
+    createAuthor: (id: number, name: string) =>
+      post<{ ok: true }>(`/api/libraries/${id}/authors`, { name }),
+    renameAuthor: (id: number, from: string, to: string) =>
+      patch<{ ok: true }>(
+        `/api/libraries/${id}/authors/${encodeURIComponent(from)}`,
+        { name: to },
+      ),
   },
   courses: {
     tree: (id: number) => request<CourseTreeResponse>(`/api/courses/${id}/tree`),
+    move: (id: number, body: MoveCourseRequest) =>
+      post<Course>(`/api/courses/${id}/move`, body),
+    moveFile: (id: number, body: MoveRequest) =>
+      post<{ ok: true }>(`/api/courses/${id}/files/move`, body),
   },
   progress: {
     update: (body: ProgressUpdateRequest) =>

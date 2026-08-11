@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { CourseTreeNode, CourseTreeResponse } from "@courseo/shared";
+import {
+  joinPath,
+  parentPath,
+  type CourseTreeNode,
+  type CourseTreeResponse,
+  type User,
+} from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
+import { InlineRename } from "./InlineRename.js";
 import { lessonLink } from "./LessonView.js";
 
-export function CourseView() {
+export function CourseView({ user }: { user: User }) {
   const courseId = Number(useParams().courseId);
   const [tree, setTree] = useState<CourseTreeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api.courses
       .tree(courseId)
       .then(setTree)
@@ -19,6 +26,20 @@ export function CourseView() {
         ),
       );
   }, [courseId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const renameNode = user.isAdmin
+    ? async (node: CourseTreeNode, newName: string) => {
+        await api.courses.moveFile(courseId, {
+          from: node.path,
+          to: joinPath(parentPath(node.path), newName),
+        });
+        load();
+      }
+    : undefined;
 
   if (error) return <p className="form-error">{error}</p>;
   if (!tree) return null;
@@ -43,7 +64,11 @@ export function CourseView() {
       {tree.children.length === 0 ? (
         <p className="tagline">No lessons found in this course folder.</p>
       ) : (
-        <TreeLevel nodes={tree.children} courseId={courseId} />
+        <TreeLevel
+          nodes={tree.children}
+          courseId={courseId}
+          onRename={renameNode}
+        />
       )}
     </div>
   );
@@ -52,17 +77,32 @@ export function CourseView() {
 function TreeLevel({
   nodes,
   courseId,
+  onRename,
 }: {
   nodes: CourseTreeNode[];
   courseId: number;
+  onRename?: (node: CourseTreeNode, newName: string) => Promise<void>;
 }) {
   return (
     <ul className="tree">
       {nodes.map((node) =>
         node.kind === "dir" ? (
           <li key={node.path} className="tree-dir">
-            <span className="tree-dir-name">{node.name}</span>
-            <TreeLevel nodes={node.children} courseId={courseId} />
+            <span className="tree-dir-name">
+              {node.name}
+              {onRename && (
+                <InlineRename
+                  name={node.name}
+                  label={`Rename ${node.name}`}
+                  onRename={(newName) => onRename(node, newName)}
+                />
+              )}
+            </span>
+            <TreeLevel
+              nodes={node.children}
+              courseId={courseId}
+              onRename={onRename}
+            />
           </li>
         ) : (
           <li key={node.path} className="tree-lesson">
@@ -76,6 +116,13 @@ function TreeLevel({
             >
               {node.name}
             </Link>
+            {onRename && (
+              <InlineRename
+                name={node.name}
+                label={`Rename ${node.name}`}
+                onRename={(newName) => onRename(node, newName)}
+              />
+            )}
             {node.subtitles && (
               <span className="tree-subtle">cc</span>
             )}
