@@ -1,0 +1,22 @@
+# Minimal standalone deployment — no reverse proxy required.
+# Build locally with `docker compose up --build`, or point `image` at a
+# published tag instead.
+services:
+  courseo:
+    image: ghcr.io/frostco/courseo:latest
+    build: .
+    container_name: courseo
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # SQLite DB and app state
+      - ./data:/data
+      # Parent mount: one subfolder per library (e.g. Personal, Family).
+      # Read-write — required for in-UI move/rename; scope it tightly.
+      - /path/to/your/courses:/libraries
+    # environment:
+    #   - SESSION_TTL_DAYS=30
+    #   # Only when running behind a trusted reverse proxy:
+    #   - TRUST_PROXY=true
+    #   - SSO_USER_HEADER=Remote-User
