@@ -5,7 +5,9 @@ import { authContext, authRouter, ssoAutoLogin, type SessionStore } from "./auth
 import type { Config } from "./config.js";
 import { coursesRouter } from "./courses.js";
 import type { AppDatabase } from "./db.js";
+import { filesRouter } from "./files.js";
 import { librariesRouter } from "./libraries.js";
+import { progressRouter } from "./progress.js";
 import { usersRouter } from "./users.js";
 
 export function createApp(
@@ -45,6 +47,8 @@ export function createApp(
   app.use("/api/users", usersRouter(db));
   app.use("/api/libraries", librariesRouter(db, config));
   app.use("/api/courses", coursesRouter(db, config));
+  app.use("/api/courses", filesRouter(db, config));
+  app.use("/api/progress", progressRouter(db, config));
 
   // API routes (libraries, courses, files, progress, fileops) mount here as
   // they are built.
