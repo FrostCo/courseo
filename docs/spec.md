@@ -30,7 +30,7 @@ Replace [`SkippySteve/OfflineU`](https://github.com/SkippySteve/OfflineU) (a for
 3. Supports **multiple "library" roots** (e.g. Personal, Family) and **browsing many courses** within each — not the single fixed root the current app is limited to.
 4. Lets users **share libraries/courses** with other users via permissions.
 5. Lets users **manage content from the UI** — scan a course, then move/rename files.
-6. Has **simple app-managed login** (in addition to being able to sit behind the existing SSO).
+6. Has **simple app-managed login** that works standalone, and can *optionally* defer to a reverse-proxy SSO when one is present (see §4.4).
 7. **Runs standalone via Docker** (self-contained: API + static UI + app login), and is **compatible with — but not dependent on — a reverse proxy and SSO** (e.g. Traefik + Authelia) if the operator wants them (see §5).
 
 ### Why replace instead of maintain
@@ -137,7 +137,7 @@ courseo/
     server/               # Node + Express + SQLite
       src/
         index.ts          # express app; serves the API + the built web assets
-        auth.ts           # login/logout, sessions, password hashing, current-user
+        auth.ts           # login/logout, sessions (sqlite + in-memory cache), password hashing, current-user
         libraries.ts      # library CRUD + membership/sharing
         permissions.ts    # access checks (does user X have access to library/course Y)
         scan.ts           # recursive course scan + lesson-type detection
@@ -166,6 +166,7 @@ courseo/
 ```
 Notes:
 - **Tooling:** pnpm (or npm) workspaces is enough for three packages. Skip Turborepo/Nx unless build times or package count grow — they layer on later without a rewrite.
+- **Pin the toolchain:** set an `engines.node` range and a `packageManager` field (e.g. `"packageManager": "pnpm@<x.y.z>"`) in the root `package.json`, and add an `.nvmrc`/`.node-version`. Keeps contributors and the Docker build on the same Node/pnpm and avoids "works on my machine" drift.
 - **`shared/` boundary:** types and *pure* helpers only. Putting lesson-type detection here lets server and client classify files identically; keep server-only/runtime code out to avoid import tangles.
 - The server serves the built web assets, so the whole app ships as **one image on one port** (see §5.1).
 
@@ -175,6 +176,7 @@ Notes:
 - `library_shares(id, library_id, user_id, role, created_at)` — grants a user access to a library. `role` ∈ {`viewer`, `editor`} where `editor` may move/rename files. Owner implicitly has full access. (Course-level sharing can be added later; start at library granularity.)
 - `courses(id, library_id, rel_path, name, created_at)` — a course is a directory within a library. Derive/refresh from scanning; `rel_path` is relative to the library root.
 - `progress(id, user_id, course_id, lesson_path, completed, position_seconds, updated_at)` — unique on `(user_id, course_id, lesson_path)`. `lesson_path` is relative to the course; **must be updated when files are moved/renamed** (see §6).
+- `sessions(id, user_id, expires_at, created_at)` — opaque random session IDs for the cookie-based login. SQLite is the source of truth; the app keeps a write-through in-memory cache of active sessions for cheap per-request auth checks (see §4.4). Sweep expired rows.
 
 Access rule: a user can see/act on a library if they own it or have a `library_shares` row; `editor`/owner required for file operations.
 
@@ -206,6 +208,8 @@ Chosen approach: **the app owns login** — username + password with hashed pass
 
 Notes / guardrails:
 - App login is the source of truth for identity and permissions, and works **standalone** — no proxy or SSO required.
+- **Sessions (decided): SQLite-backed with a write-through in-memory cache.** Use an opaque, `httpOnly` / `secure` / `sameSite=lax` session-ID cookie backed by a `sessions` table (chosen over stateless JWT so access can be revoked *immediately* when a share/role/user changes). Keep active sessions in an in-memory map so the per-request auth check is a lookup, not a DB read: load non-expired sessions on startup, add on login, and on logout/invalidation delete from **both** the cache and the DB. SQLite remains the source of truth (survives restarts); the cache is just an accelerator. Expire by TTL and periodically sweep expired rows. (Single container only — if the app is ever scaled to multiple instances, drop the in-process cache or add cross-instance invalidation.)
+- **Cache only the session → identity mapping, never permissions.** The in-memory cache (and the `sessions` row) should map a session ID to `user_id` + `expires_at` only. **Do not** cache shares/roles/`is_admin` in the session — resolve those fresh from the DB on each request (they're cheap SQLite lookups). This preserves *instant revocation*: when an owner removes a share, changes a role, or disables a user, the very next request reflects it, even though the session itself is still valid. Baking permissions into the session (or a token) would reintroduce exactly the staleness problem that made us pick DB sessions over JWT.
 - **Optional SSO compatibility:** if deployed behind a trusted proxy that injects a `Remote-User` header (e.g. Authelia/oauth2-proxy), optionally auto-provision/log in a matching app user to avoid a double login. Make this **opt-in** (e.g. a `TRUST_PROXY_HEADERS` / `SSO_USER_HEADER` setting) and only honor the header from a trusted source — never when the app is directly reachable. Some proxies strip underscore headers, so use the dash form (`Remote-User`).
 - Seed the initial admin user via env vars or a one-time setup screen; don't hardcode credentials.
 
