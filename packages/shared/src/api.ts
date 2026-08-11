@@ -41,6 +41,25 @@ export interface CreateUserRequest {
   isAdmin?: boolean;
 }
 
+/**
+ * PATCH /api/users/:id (admin). Setting `password` resets it and signs the
+ * user out everywhere. The last remaining admin cannot be demoted.
+ */
+export interface UpdateUserRequest {
+  displayName?: string;
+  isAdmin?: boolean;
+  password?: string;
+}
+
+/**
+ * PUT /api/me/password. Verifies the current password, then signs out all
+ * other sessions (the current one is re-issued).
+ */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // ---------------------------------------------------------------------------
 // Libraries & sharing
 // ---------------------------------------------------------------------------

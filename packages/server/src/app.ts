@@ -45,7 +45,7 @@ export function createApp(
   }
 
   app.use("/api", authRouter(db, sessions, config));
-  app.use("/api/users", usersRouter(db));
+  app.use("/api/users", usersRouter(db, sessions));
   app.use("/api/libraries", librariesRouter(db, config));
   app.use("/api/courses", coursesRouter(db, config));
   app.use("/api/courses", filesRouter(db, config));

@@ -6,6 +6,7 @@ import {
   isValidDisplayName,
   isValidPassword,
   isValidUsername,
+  type ChangePasswordRequest,
   type LoginRequest,
   type SetupRequest,
   type User,
@@ -294,6 +295,37 @@ export function authRouter(
 
   router.get("/me", requireAuth, (req, res) => {
     res.json(req.user);
+  });
+
+  // Change own password: verifies the current one, then signs out every
+  // other session ("sign out everywhere else") and re-issues this one.
+  router.put("/me/password", requireAuth, async (req, res) => {
+    const body = (req.body ?? {}) as Partial<ChangePasswordRequest>;
+    const { currentPassword, newPassword } = body;
+    if (
+      typeof currentPassword !== "string" ||
+      typeof newPassword !== "string" ||
+      !isValidPassword(newPassword)
+    ) {
+      res.status(400).json({ error: "invalid password" });
+      return;
+    }
+    const row = getUserById(db, req.user!.id)!;
+    const verified = await argon2
+      .verify(row.password_hash, currentPassword)
+      .catch(() => false);
+    if (!verified) {
+      res.status(403).json({ error: "current password is incorrect" });
+      return;
+    }
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(
+      await argon2.hash(newPassword),
+      row.id,
+    );
+    sessions.deleteForUser(row.id);
+    const session = sessions.create(row.id);
+    setSessionCookie(res, config, session);
+    res.json({ ok: true });
   });
 
   return router;
