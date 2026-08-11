@@ -69,6 +69,12 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_sessions_expires ON sessions(expires_at);
   `,
+
+  // 002 — cache the lesson count per course at scan time so the course
+  // list can show completion stats without re-walking every course dir.
+  `
+  ALTER TABLE courses ADD COLUMN total_lessons INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export type AppDatabase = Database.Database;

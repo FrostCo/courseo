@@ -13,6 +13,7 @@ import {
 } from "@courseo/shared";
 import { requireAdmin, requireAuth } from "./auth.js";
 import type { Config } from "./config.js";
+import { listCourses, syncLibraryCourses } from "./courses.js";
 import type { AppDatabase } from "./db.js";
 import {
   canManageLibrary,
@@ -157,6 +158,32 @@ export function librariesRouter(db: AppDatabase, config: Config): Router {
     }
     next();
   };
+
+  const requireView: RequestHandler = (req, res, next) => {
+    const access = getLibraryAccess(db, req.user!, res.locals.library as LibraryRow);
+    if (access === null) {
+      res.status(403).json({ error: "no access to this library" });
+      return;
+    }
+    res.locals.access = access;
+    next();
+  };
+
+  router.get("/:id", requireView, (req, res) => {
+    const library = res.locals.library as LibraryRow;
+    res.json(toLibrary(library, res.locals.access as LibraryAccess));
+  });
+
+  // Course listing syncs the courses table with the directory on every
+  // call, so newly added content shows up without a manual rescan; the
+  // explicit rescan endpoint exists for a refresh button.
+  const listLibraryCourses: RequestHandler = (req, res) => {
+    const library = res.locals.library as LibraryRow;
+    syncLibraryCourses(db, library, config.librariesRoot);
+    res.json(listCourses(db, library.id, req.user!.id));
+  };
+  router.get("/:id/courses", requireView, listLibraryCourses);
+  router.post("/:id/rescan", requireView, listLibraryCourses);
 
   router.patch("/:id", requireManage, (req, res) => {
     const library = res.locals.library as LibraryRow;

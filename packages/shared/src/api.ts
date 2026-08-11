@@ -128,6 +128,15 @@ export interface LessonNode {
   progress?: LessonProgress;
 }
 
+/** GET /api/courses/:id/tree */
+export interface CourseTreeResponse {
+  course: Course;
+  /** Breadcrumb context. */
+  library: { id: number; name: string };
+  children: CourseTreeNode[];
+  stats: CourseStats;
+}
+
 // ---------------------------------------------------------------------------
 // Progress
 // ---------------------------------------------------------------------------
