@@ -1,4 +1,13 @@
-import type { User } from "@courseo/shared";
+import argon2 from "argon2";
+import { Router } from "express";
+import {
+  isValidDisplayName,
+  isValidPassword,
+  isValidUsername,
+  type CreateUserRequest,
+  type User,
+} from "@courseo/shared";
+import { requireAdmin, requireAuth } from "./auth.js";
 import type { AppDatabase } from "./db.js";
 
 export interface UserRow {
@@ -70,4 +79,47 @@ export function listUsers(db: AppDatabase): UserRow[] {
   return db
     .prepare("SELECT * FROM users ORDER BY username COLLATE NOCASE")
     .all() as UserRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Routes: /api/users
+// ---------------------------------------------------------------------------
+
+export function usersRouter(db: AppDatabase): Router {
+  const router = Router();
+
+  // Any authenticated user may list users: library owners (who need not be
+  // admins) pick share targets from this list. Public fields only.
+  router.get("/", requireAuth, (_req, res) => {
+    res.json(listUsers(db).map(toUser));
+  });
+
+  router.post("/", requireAdmin, async (req, res) => {
+    const body = (req.body ?? {}) as Partial<CreateUserRequest>;
+    const { username, displayName, password } = body;
+    if (
+      typeof username !== "string" ||
+      typeof displayName !== "string" ||
+      typeof password !== "string" ||
+      !isValidUsername(username) ||
+      !isValidDisplayName(displayName) ||
+      !isValidPassword(password)
+    ) {
+      res.status(400).json({ error: "invalid username, display name, or password" });
+      return;
+    }
+    if (getUserByUsername(db, username)) {
+      res.status(409).json({ error: "username already taken" });
+      return;
+    }
+    const row = createUser(db, {
+      username,
+      displayName: displayName.trim(),
+      passwordHash: await argon2.hash(password),
+      isAdmin: body.isAdmin === true,
+    });
+    res.status(201).json(toUser(row));
+  });
+
+  return router;
 }

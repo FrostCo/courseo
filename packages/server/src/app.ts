@@ -4,6 +4,7 @@ import express, { type Express } from "express";
 import { authContext, authRouter, ssoAutoLogin, type SessionStore } from "./auth.js";
 import type { Config } from "./config.js";
 import type { AppDatabase } from "./db.js";
+import { usersRouter } from "./users.js";
 
 export function createApp(
   config: Config,
@@ -39,6 +40,7 @@ export function createApp(
   }
 
   app.use("/api", authRouter(db, sessions, config));
+  app.use("/api/users", usersRouter(db));
 
   // API routes (libraries, courses, files, progress, fileops) mount here as
   // they are built.
