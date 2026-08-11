@@ -1,10 +1,12 @@
 import {
   encodePathForUrl,
   type ApiError,
+  type ChangePasswordRequest,
   type Course,
   type CourseTreeResponse,
   type CreateLibraryRequest,
   type CreateShareRequest,
+  type CreateUserRequest,
   type LessonProgress,
   type Library,
   type LibraryShare,
@@ -14,6 +16,7 @@ import {
   type ProgressUpdateRequest,
   type SetupRequest,
   type SetupStatus,
+  type UpdateUserRequest,
   type User,
 } from "@courseo/shared";
 
@@ -69,7 +72,17 @@ export const api = {
   me: () => request<User>("/api/me"),
   users: {
     list: () => request<User[]>("/api/users"),
+    create: (body: CreateUserRequest) => post<User>("/api/users", body),
+    update: (id: number, body: UpdateUserRequest) =>
+      patch<User>(`/api/users/${id}`, body),
+    remove: (id: number) => del<{ ok: true }>(`/api/users/${id}`),
   },
+  changePassword: (body: ChangePasswordRequest) =>
+    request<{ ok: true }>("/api/me/password", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
   libraries: {
     list: () => request<Library[]>("/api/libraries"),
     get: (id: number) => request<Library>(`/api/libraries/${id}`),

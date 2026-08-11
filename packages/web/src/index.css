@@ -496,6 +496,42 @@ body {
   font-size: 0.875rem;
 }
 
+/* Users & account */
+
+.topbar-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.topbar-link:hover {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+.panel-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.panel-check input {
+  width: auto;
+}
+
+.panel-spacer {
+  flex: 1;
+}
+
+.form-success {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.account-panel {
+  max-width: 26rem;
+}
+
 /* File management (admin) */
 
 .heading-actions {

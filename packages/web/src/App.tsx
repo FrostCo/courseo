@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import type { User } from "@courseo/shared";
 import { api, ApiRequestError } from "./api.js";
+import { Account } from "./components/Account.js";
 import { CourseBrowser } from "./components/CourseBrowser.js";
 import { CourseView } from "./components/CourseView.js";
 import { LessonView } from "./components/LessonView.js";
 import { Libraries } from "./components/Libraries.js";
 import { Login } from "./components/Login.js";
 import { Setup } from "./components/Setup.js";
+import { Users } from "./components/Users.js";
 
 type AuthState =
   | { phase: "loading" }
@@ -62,7 +64,14 @@ export function App() {
               Course<span className="accent">o</span>
             </Link>
             <span className="topbar-user">
-              {auth.user.displayName}
+              {auth.user.isAdmin && (
+                <Link className="topbar-link" to="/users">
+                  Users
+                </Link>
+              )}
+              <Link className="topbar-link" to="/account">
+                {auth.user.displayName}
+              </Link>
               <button className="link-button" onClick={handleLogout}>
                 Sign out
               </button>
@@ -80,6 +89,10 @@ export function App() {
                 element={<CourseView user={auth.user} />}
               />
               <Route path="/courses/:courseId/lessons/*" element={<LessonView />} />
+              <Route path="/account" element={<Account user={auth.user} />} />
+              {auth.user.isAdmin && (
+                <Route path="/users" element={<Users user={auth.user} />} />
+              )}
               <Route path="*" element={<Navigate to="/libraries" replace />} />
             </Routes>
           </main>
