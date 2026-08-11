@@ -1,6 +1,6 @@
 # Courseo — Project Spec / Handoff
 
-Status: planning. This document is a self-contained brief for building **Courseo**, a **self-hosted course library, viewer, and organizer** built in **Node + React**, replacing the current Python/Flask app (`OfflineU`). It captures what the existing app does, the infrastructure it must fit into, and the hard-won gotchas discovered while deploying it. It is written to be read cold in a separate agent session with no prior context.
+Status: planning. This document is a self-contained brief for building **Courseo**, a **self-hosted course library, viewer, and organizer** built in **Node + React**, replacing the current Python/Flask app (`OfflineU`). It captures what the existing app does, how it can be deployed (standalone by default, optionally behind a reverse proxy/SSO), and the hard-won gotchas discovered while deploying it. It is written to be read cold in a separate agent session with no prior context.
 
 **Tagline:** *Courseo — organize, share, and watch your self-hosted courses.*
 
@@ -31,7 +31,7 @@ Replace [`SkippySteve/OfflineU`](https://github.com/SkippySteve/OfflineU) (a for
 4. Lets users **share libraries/courses** with other users via permissions.
 5. Lets users **manage content from the UI** — scan a course, then move/rename files.
 6. Has **simple app-managed login** (in addition to being able to sit behind the existing SSO).
-7. Deploys cleanly into an existing Ansible-managed Docker + Traefik + Authelia homelab (see §5).
+7. **Runs standalone via Docker** (self-contained: API + static UI + app login), and is **compatible with — but not dependent on — a reverse proxy and SSO** (e.g. Traefik + Authelia) if the operator wants them (see §5).
 
 ### Why replace instead of maintain
 - The app is tiny (~600 lines of real Python logic + ~1k lines of templates; Flask-only, no DB).
@@ -104,7 +104,7 @@ Single-file Flask app (`offlineu_core.py`) + 3 Jinja templates. No database; pro
 - Subtitle track support for video (`.srt`/`.vtt`).
 - Mobile-friendly layout.
 - Bulk file operations, drag-and-drop reorganization, and an undo for moves/renames.
-- Optional: fall back to / interoperate with Authelia SSO headers when present (see §4.4).
+- Optional: interoperate with reverse-proxy SSO headers (e.g. Authelia) when present (see §4.4).
 
 ### Explicit non-goals (for v1)
 - **Uploading** new content through the browser (move/rename of existing files *is* in scope; ingesting new files is not).
@@ -123,40 +123,51 @@ Nothing here is prescriptive — adjust to preference.
 - **Frontend**: React (Vite). Component-based viewers per media type.
 - **Auth**: simple app-managed login (username + password) — decided; see §4.4.
 
-### 4.1 Suggested layout
+### 4.1 Suggested layout (pnpm-workspaces monorepo)
+Single repo, one deployable Docker image. Three workspace packages so the API and UI can share a typed contract:
 ```
 courseo/
-  server/
-    index.js            # express app, static React build, API mount
-    auth.js             # login/logout, sessions, password hashing, current-user
-    libraries.js        # library CRUD + membership/sharing
-    permissions.js      # access checks (does user X have access to library/course Y)
-    scan.js             # recursive course scan + lesson-type detection
-    files.js            # GET /api/files/* with range support (access-checked)
-    fileops.js          # move/rename (path-traversal-safe, updates progress rows)
-    progress.js         # progress + completion endpoints
-    db.js               # sqlite schema + queries + migrations
-  web/                  # React (Vite)
-    src/
-      components/
-        Login.tsx
-        LibraryList.tsx     # pick/manage library roots
-        LibraryManager.tsx  # add/edit/remove libraries + sharing UI
-        CourseBrowser.tsx   # list courses within a library
-        CourseTree.tsx
-        FileManager.tsx     # move/rename UI for a course
-        LessonView.tsx      # dispatches to the right viewer
-        VideoPlayer.tsx     # <video> + timeupdate -> progress
-        AudioPlayer.tsx
-        PdfViewer.tsx       # <iframe>/<embed> or pdf.js
-        TextViewer.tsx      # md/txt/html
-        QuizView.tsx
-        ProgressBar.tsx
-      api.ts
-      App.tsx
-  Dockerfile            # multi-stage: build web, run server; serve web build statically
-  package.json
+  package.json            # workspace root (private): shared scripts + devDeps
+  pnpm-workspace.yaml     # packages: ["packages/*"]
+  Dockerfile              # multi-stage: build web -> bundle static build into the server image
+  packages/
+    shared/               # types shared by server + web (API contracts, enums)
+      src/                # keep to types + small PURE helpers (e.g. lesson-type
+                          #   detection, path normalization) — no server-only code
+    server/               # Node + Express + SQLite
+      src/
+        index.ts          # express app; serves the API + the built web assets
+        auth.ts           # login/logout, sessions, password hashing, current-user
+        libraries.ts      # library CRUD + membership/sharing
+        permissions.ts    # access checks (does user X have access to library/course Y)
+        scan.ts           # recursive course scan + lesson-type detection
+        files.ts          # GET /api/files/* with range support (access-checked)
+        fileops.ts        # move/rename (path-traversal-safe, updates progress rows)
+        progress.ts       # progress + completion endpoints
+        db.ts             # sqlite schema + queries + migrations
+    web/                  # React (Vite)
+      src/
+        components/
+          Login.tsx
+          LibraryList.tsx     # pick/manage library roots
+          LibraryManager.tsx  # add/edit/remove libraries + sharing UI
+          CourseBrowser.tsx   # list courses within a library
+          CourseTree.tsx
+          FileManager.tsx     # move/rename UI for a course
+          LessonView.tsx      # dispatches to the right viewer
+          VideoPlayer.tsx     # <video> + timeupdate -> progress
+          AudioPlayer.tsx
+          PdfViewer.tsx       # <iframe>/<embed> or pdf.js
+          TextViewer.tsx      # md/txt/html
+          QuizView.tsx
+          ProgressBar.tsx
+        api.ts
+        App.tsx
 ```
+Notes:
+- **Tooling:** pnpm (or npm) workspaces is enough for three packages. Skip Turborepo/Nx unless build times or package count grow — they layer on later without a rewrite.
+- **`shared/` boundary:** types and *pure* helpers only. Putting lesson-type detection here lets server and client classify files identically; keep server-only/runtime code out to avoid import tangles.
+- The server serves the built web assets, so the whole app ships as **one image on one port** (see §5.1).
 
 ### 4.2 Data model (SQLite)
 - `users(id, username, display_name, password_hash, is_admin, created_at)` — password hashed with bcrypt/argon2. `is_admin` can gate library creation / user management.
@@ -194,39 +205,41 @@ File management (editor/owner; access-checked, path-traversal-safe)
 Chosen approach: **the app owns login** — username + password with hashed passwords (bcrypt/argon2) and a signed session cookie. Keep it minimal: a small user table, a login page, session middleware, and an admin-seeded first user. This makes the app self-contained and independent of the SSO perimeter, which matters now that users have distinct owned/shared content and can move files.
 
 Notes / guardrails:
-- Still deploy it **behind Authelia** as defense-in-depth (belt-and-suspenders); the app's own login is the source of truth for identity and permissions.
-- **Optional convenience:** if a trusted `Remote-User` header is present (request came through Authelia), auto-provision/log in a matching app user to avoid a double login. Only trust that header from the internal network, and remember the proxy strips underscore headers (`underscoreHeadersStrategy=delete`) so use the dash form (`Remote-User`).
+- App login is the source of truth for identity and permissions, and works **standalone** — no proxy or SSO required.
+- **Optional SSO compatibility:** if deployed behind a trusted proxy that injects a `Remote-User` header (e.g. Authelia/oauth2-proxy), optionally auto-provision/log in a matching app user to avoid a double login. Make this **opt-in** (e.g. a `TRUST_PROXY_HEADERS` / `SSO_USER_HEADER` setting) and only honor the header from a trusted source — never when the app is directly reachable. Some proxies strip underscore headers, so use the dash form (`Remote-User`).
 - Seed the initial admin user via env vars or a one-time setup screen; don't hardcode credentials.
 
 ---
 
-## 5. Infrastructure it must fit into (homelab context)
+## 5. Deployment
 
-The app will be deployed via the existing Ansible `docker` role (in the `configs` repo). Match these conventions:
+Courseo is **standalone-first** and **reverse-proxy/SSO-compatible, but not dependent on them**. A user should be able to `docker run` it and have a working, self-contained app; running it behind Traefik/Cloudflare/Authelia is an *optional* enhancement, not a requirement.
 
-- **Reverse proxy**: Traefik **v3.7.10**, Docker provider via a socket-proxy, dynamic config via file provider. Services are discovered by labels.
-- **External Docker network**: `t3_proxy` (services join this; Traefik routes to them by container name — no host port publishing).
-- **TLS/DNS**: wildcard cert via Cloudflare DNS challenge; hostnames like `courseo.<domain>`. Site is also behind Cloudflare.
-- **Auth**: Authelia SSO via a forwardAuth middleware, applied through a `chain-authelia@file` middleware chain. The chain also includes rate-limiting and a security-headers middleware.
-- **Security headers** (global, via `middlewares-secure-headers`): `X-Content-Type-Options: nosniff`, HSTS, `X-Frame-Options: SAMEORIGIN`, referrer-policy, permissions-policy, etc.
-- **Storage conventions**: app config/state under `$DOCKERDIR/appdata/<app>/…`; course content is a host mount (currently `/mnt/media/Courses/Personal`).
-- **Per-app compose file**: each service is a `compose/<name>.yml` (Jinja template) pulled into a top-level `docker-compose.yml` via `include:`. Registered in `defaults/main.yml` (`all_containers`) and per-host `containers`.
+### 5.1 Standalone (default)
+- Ships as a **single Docker image** that serves the API and the built web UI on **one HTTP port**.
+- Configured via env vars (port, session secret, DB path, allowed library root(s), admin seed).
+- Volumes: a data dir for the SQLite DB/state, and one or more library roots mounted **read-write** (write access is needed for in-UI move/rename — scope the mount tightly).
+- TLS is optional and typically terminated by whatever proxy (if any) sits in front; the app itself speaks plain HTTP and only trusts `X-Forwarded-*` when explicitly configured to.
+- Ship a `docker run` example and a minimal `docker-compose.yml` in the README as the primary install path.
+- Healthcheck: use a check the image actually supports (see §6) — e.g. a Node one-liner or `wget`, **not** `curl` unless it's installed.
 
-### Deployment checklist (when the app is ready)
-1. Publish an image (GHCR) or build locally.
-2. Add `roles/docker/templates/compose/courseo.yml.j2`:
-   - `networks: [t3_proxy]`, no published ports, `security_opt: no-new-privileges:true`.
-   - Volumes: `appdata/courseo` for the SQLite DB/state; **read-write** mount(s) for the library roots (write access is required for in-UI move/rename — scope the mount to just the library parent, e.g. `/mnt/media/Courses:/libraries`).
-   - Traefik labels: `courseo-rtr` router (`Host(courseo.$DOMAINNAME)`, websecure, tls), `chain-authelia@file` middleware, `courseo-svc` on the app's port.
-   - Healthcheck: **use a check the image actually supports** (see §6 — the old one broke on `curl`). Prefer a Node/`wget`/built-in check.
-3. Register in `defaults/main.yml` (`all_containers`, group `apps`) and the host's `containers`.
-4. Add a `setup.yml` task to create appdata dirs.
+### 5.2 Optional: behind a reverse proxy + SSO
+Courseo should also run cleanly behind common proxies (Traefik, Caddy, nginx) with optional SSO (Authelia/oauth2-proxy). Design for the §6 compatibility gotchas — encoded slashes, `X-Frame-Options`, `nosniff`, HTTP range requests, underscore headers — so it "just works" when proxied. SSO header auto-login is opt-in (see §4.4). Document a sample reverse-proxy config (labels/vhost) in the README, but keep it out of the app's required config.
+
+### 5.3 Reference: my homelab (one specific target, not a requirement)
+For my own deployment via an Ansible `docker` role — captured here as *one* concrete example, none of which should be baked into the app:
+- Traefik **v3.7.10** (Docker provider via socket-proxy, dynamic config via file provider); services discovered by labels.
+- External `t3_proxy` network — Traefik routes by container name, **no published ports**.
+- Wildcard TLS via **Cloudflare** DNS challenge; hostnames like `courseo.<domain>` (site also fronted by Cloudflare).
+- Authelia SSO via a `chain-authelia@file` middleware chain (also rate-limiting + security headers: `nosniff`, HSTS, `X-Frame-Options: SAMEORIGIN`, etc.).
+- App state under `$DOCKERDIR/appdata/courseo`; library content bind-mounted **read-write**.
+- Added as a per-app `compose/courseo.yml.j2` template registered in `defaults/main.yml` (`all_containers`) + the host's `containers`, with a `setup.yml` task to create appdata dirs.
 
 ---
 
 ## 6. Hard-won gotchas from deploying the current app (carry these forward)
 
-These caused real, time-consuming bugs. The rebuild should account for all of them.
+These caused real, time-consuming bugs. Some are **universal** (correct Content-Types, HTTP range support, path-traversal safety, JS/HTML escaping, progress-key updates); others are **reverse-proxy-specific** (encoded slashes, `X-Frame-Options`, `nosniff`, underscore headers) and only bite when Courseo runs behind a proxy. Since that's a supported deployment (§5.2), design for them anyway so the app is proxy-compatible out of the box.
 
 1. **Traefik skips `unhealthy` containers.** A broken Docker `healthcheck` (the upstream used `curl`, which wasn't in the image) made the container `unhealthy`, and Traefik v3 refused to register a router for it — looked like a routing problem but wasn't. **Lesson:** only use a healthcheck the image can actually run.
 
