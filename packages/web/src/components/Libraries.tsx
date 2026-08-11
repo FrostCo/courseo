@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import type { Library, User } from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
 import { ShareManager } from "./ShareManager.js";
@@ -59,7 +60,9 @@ export function Libraries({ user }: { user: User }) {
           return (
             <li key={library.id} className="library-card">
               <div className="library-card-main">
-                <span className="library-name">{library.name}</span>
+                <Link className="library-name" to={`/libraries/${library.id}`}>
+                  {library.name}
+                </Link>
                 <span className={`badge badge--${library.access}`}>
                   {library.access}
                 </span>

@@ -1,5 +1,7 @@
 import type {
   ApiError,
+  Course,
+  CourseTreeResponse,
   CreateLibraryRequest,
   CreateShareRequest,
   Library,
@@ -65,6 +67,9 @@ export const api = {
   },
   libraries: {
     list: () => request<Library[]>("/api/libraries"),
+    get: (id: number) => request<Library>(`/api/libraries/${id}`),
+    courses: (id: number) => request<Course[]>(`/api/libraries/${id}/courses`),
+    rescan: (id: number) => post<Course[]>(`/api/libraries/${id}/rescan`),
     availableRoots: () => request<string[]>("/api/libraries/roots"),
     create: (body: CreateLibraryRequest) => post<Library>("/api/libraries", body),
     rename: (id: number, name: string) =>
@@ -75,5 +80,8 @@ export const api = {
       post<{ ok: true }>(`/api/libraries/${id}/shares`, body),
     unshare: (id: number, userId: number) =>
       del<{ ok: true }>(`/api/libraries/${id}/shares/${userId}`),
+  },
+  courses: {
+    tree: (id: number) => request<CourseTreeResponse>(`/api/courses/${id}/tree`),
   },
 };

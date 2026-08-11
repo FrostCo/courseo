@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import type { User } from "@courseo/shared";
 import { api, ApiRequestError } from "./api.js";
+import { CourseBrowser } from "./components/CourseBrowser.js";
+import { CourseView } from "./components/CourseView.js";
 import { Libraries } from "./components/Libraries.js";
 import { Login } from "./components/Login.js";
 import { Setup } from "./components/Setup.js";
@@ -54,9 +57,9 @@ export function App() {
       return (
         <>
           <header className="topbar">
-            <span className="brand">
+            <Link className="brand brand-link" to="/libraries">
               Course<span className="accent">o</span>
-            </span>
+            </Link>
             <span className="topbar-user">
               {auth.user.displayName}
               <button className="link-button" onClick={handleLogout}>
@@ -65,7 +68,12 @@ export function App() {
             </span>
           </header>
           <main className="content">
-            <Libraries user={auth.user} />
+            <Routes>
+              <Route path="/libraries" element={<Libraries user={auth.user} />} />
+              <Route path="/libraries/:libraryId" element={<CourseBrowser />} />
+              <Route path="/courses/:courseId" element={<CourseView />} />
+              <Route path="*" element={<Navigate to="/libraries" replace />} />
+            </Routes>
           </main>
         </>
       );

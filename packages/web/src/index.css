@@ -162,6 +162,180 @@ body {
   border-color: #e2b93b;
 }
 
+/* --- Breadcrumbs ----------------------------------------------------------- */
+
+.breadcrumbs {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+
+.breadcrumbs a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.brand-link {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* --- Course browser -------------------------------------------------------- */
+
+.course-group {
+  margin: 1.25rem 0;
+}
+
+.course-group-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.course-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.course-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.course-card:hover {
+  border-color: var(--accent);
+}
+
+.course-name {
+  font-weight: 600;
+}
+
+.course-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.progress-track {
+  width: 7rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* --- Course tree ------------------------------------------------------------ */
+
+.tree {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+.tree .tree {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.1rem;
+  border-left: 1px solid var(--border);
+}
+
+.tree-dir {
+  margin-top: 0.75rem;
+}
+
+.tree-dir-name {
+  font-weight: 600;
+}
+
+.tree-lesson {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+}
+
+.tree-lesson-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.type-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  flex-shrink: 0;
+  min-width: 3.2rem;
+  text-align: center;
+}
+
+.type-badge--video {
+  color: #6cb2f5;
+  border-color: #6cb2f5;
+}
+
+.type-badge--audio {
+  color: #c792ea;
+  border-color: #c792ea;
+}
+
+.type-badge--pdf {
+  color: #f07178;
+  border-color: #f07178;
+}
+
+.type-badge--quiz {
+  color: #e2b93b;
+  border-color: #e2b93b;
+}
+
+.tree-subtle {
+  font-size: 0.65rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.25rem;
+}
+
+.tree-done {
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-left: auto;
+}
+
 /* --- Panels (inline forms) ------------------------------------------------ */
 
 .panel {
