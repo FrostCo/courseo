@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "@courseo/shared";
 import { api, ApiRequestError } from "./api.js";
+import { Libraries } from "./components/Libraries.js";
 import { Login } from "./components/Login.js";
 import { Setup } from "./components/Setup.js";
 
@@ -63,10 +64,8 @@ export function App() {
               </button>
             </span>
           </header>
-          <main className="shell">
-            <p className="tagline">
-              Signed in. Libraries and courses land here next.
-            </p>
+          <main className="content">
+            <Libraries user={auth.user} />
           </main>
         </>
       );
