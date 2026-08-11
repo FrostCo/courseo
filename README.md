@@ -40,6 +40,26 @@ Or use the [`docker-compose.yml`](docker-compose.yml) in this repo. Then open `h
 - `/data` holds the SQLite database (all app state).
 - `/libraries` is the parent mount: **one subfolder per library** (e.g. `Personal/`, `Family/`). Adding a library in the UI means picking one of these subfolders. Mount it **read-write** — in-UI move/rename needs it; scope the mount tightly.
 
+### Library layout
+
+Courseo expects one directory convention inside the mount:
+
+```text
+courses/                  ← the parent mount (→ /libraries)
+├── Personal/             ← a library: a shareable group of courses
+│   ├── Jane Author/      ← an author or organization
+│   │   ├── Course One/   ← a course
+│   │   └── Course Two/
+│   └── Some Org/
+│       └── Course Three/
+└── Family/               ← another library
+    └── ...
+```
+
+- **Library** (top level) — the unit of ownership and sharing. Split by audience (`Personal/`, `Family/`) or however you like. Only want one? Make a single `Courses/` folder and register that — the group level is always required, so a collection can grow into multiple libraries later without moving files.
+- **Author / organization** (second level) — who the course is from. This keeps large collections browsable and avoids name collisions between courses.
+- **Course** (third level) — a course directory; everything inside it (sections, lessons, resources) is scanned into the course tree.
+
 ### Configuration
 
 | Env var | Default | Purpose |
