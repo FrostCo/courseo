@@ -23,6 +23,22 @@ export function isSafeRelPath(path: string): boolean {
 }
 
 /**
+ * A valid name for a single file/folder created or renamed through the
+ * app: one path segment, trimmed, not hidden (leading "." — the scanner
+ * skips dotfiles, so allowing them would make content vanish), no
+ * separators or control characters, and no trailing dot (breaks Windows
+ * mounts).
+ */
+export function isValidName(name: string): boolean {
+  if (name.length === 0 || name.length > 200) return false;
+  if (name !== name.trim()) return false;
+  if (name.startsWith(".") || name.endsWith(".")) return false;
+  // eslint-disable-next-line no-control-regex
+  if (/[/\\\u0000-\u001f]/.test(name)) return false;
+  return true;
+}
+
+/**
  * Build a URL path from a relative file path: each segment is
  * percent-encoded, but separators stay as real "/" characters. This avoids
  * `%2F` in URLs, which some reverse proxies reject before routing

@@ -66,7 +66,10 @@ export function scanLibraryCourses(libraryRoot: string): ScannedCourse[] {
       return type === "video" || type === "audio";
     });
     if (group.dirs.length === 0 || hasDirectMedia) {
-      courses.push(makeCourse(libraryRoot, groupName));
+      // A leaf directory with no lessons at all is an (empty) author
+      // folder waiting for content, not a zero-lesson course.
+      const candidate = makeCourse(libraryRoot, groupName);
+      if (candidate.totalLessons > 0) courses.push(candidate);
     } else {
       for (const courseName of group.dirs) {
         courses.push(makeCourse(libraryRoot, joinPath(groupName, courseName)));
@@ -74,6 +77,20 @@ export function scanLibraryCourses(libraryRoot: string): ScannedCourse[] {
     }
   }
   return courses;
+}
+
+/**
+ * Top-level directories that act as author/organization groups — every
+ * top-level directory that is not itself an ungrouped course. Includes
+ * empty folders, so a freshly created author shows up as a destination.
+ */
+export function listAuthorFolders(libraryRoot: string): string[] {
+  const ungrouped = new Set(
+    scanLibraryCourses(libraryRoot)
+      .filter((c) => !c.relPath.includes("/"))
+      .map((c) => c.relPath),
+  );
+  return listDir(libraryRoot).dirs.filter((dir) => !ungrouped.has(dir));
 }
 
 function makeCourse(libraryRoot: string, relPath: string): ScannedCourse {

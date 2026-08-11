@@ -156,7 +156,7 @@ export interface ProgressUpdateRequest {
 }
 
 // ---------------------------------------------------------------------------
-// File management (editor/owner)
+// File management (admin only)
 // ---------------------------------------------------------------------------
 
 /**
@@ -167,6 +167,29 @@ export interface ProgressUpdateRequest {
 export interface MoveRequest {
   from: string;
   to: string;
+}
+
+/** POST /api/libraries/:id/authors — create an author/organization folder. */
+export interface CreateAuthorRequest {
+  name: string;
+}
+
+/** PATCH /api/libraries/:id/authors/:author — rename an author folder. */
+export interface RenameAuthorRequest {
+  name: string;
+}
+
+/**
+ * POST /api/courses/:id/move — move/rename a course. Omitted fields keep
+ * their current value: `name` renames the course folder, `author` moves it
+ * under a different (existing) author folder, `libraryId` moves it to
+ * another library/group. Progress is keyed by course id and course-relative
+ * paths, so none of these touch progress rows.
+ */
+export interface MoveCourseRequest {
+  libraryId?: number;
+  author?: string;
+  name?: string;
 }
 
 // ---------------------------------------------------------------------------

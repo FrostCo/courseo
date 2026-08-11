@@ -3,9 +3,32 @@ import {
   baseName,
   encodePathForUrl,
   isSafeRelPath,
+  isValidName,
   joinPath,
   parentPath,
 } from "./paths.js";
+
+describe("isValidName", () => {
+  it("accepts ordinary folder and file names", () => {
+    expect(isValidName("Jane Author")).toBe(true);
+    expect(isValidName("01 Intro & Basics")).toBe(true);
+    expect(isValidName("lesson.mp4")).toBe(true);
+  });
+
+  it("rejects separators, traversal, and hidden names", () => {
+    expect(isValidName("a/b")).toBe(false);
+    expect(isValidName("a\\b")).toBe(false);
+    expect(isValidName("..")).toBe(false);
+    expect(isValidName(".hidden")).toBe(false);
+  });
+
+  it("rejects empty, untrimmed, trailing-dot, and control chars", () => {
+    expect(isValidName("")).toBe(false);
+    expect(isValidName(" padded ")).toBe(false);
+    expect(isValidName("name.")).toBe(false);
+    expect(isValidName("a\tb")).toBe(false);
+  });
+});
 
 describe("isSafeRelPath", () => {
   it("accepts normal relative paths", () => {

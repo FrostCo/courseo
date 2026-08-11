@@ -3,11 +3,14 @@ import path from "node:path";
 import { Router, type RequestHandler } from "express";
 import {
   isSafeRelPath,
+  isValidName,
+  type CreateAuthorRequest,
   type CreateLibraryRequest,
   type CreateShareRequest,
   type Library,
   type LibraryAccess,
   type LibraryShare,
+  type RenameAuthorRequest,
   type ShareRole,
   type UpdateLibraryRequest,
 } from "@courseo/shared";
@@ -21,7 +24,9 @@ import {
   getLibraryRow,
   type LibraryRow,
 } from "./permissions.js";
+import { listAuthorFolders } from "./scan.js";
 import { getUserById } from "./users.js";
+import { renameOnDiskThen } from "./file-ops.js";
 
 function toLibrary(row: LibraryRow, access: LibraryAccess): Library {
   return {
@@ -206,6 +211,79 @@ export function librariesRouter(db: AppDatabase, config: Config): Router {
   router.delete("/:id", requireManage, (req, res) => {
     const library = res.locals.library as LibraryRow;
     db.prepare("DELETE FROM libraries WHERE id = ?").run(library.id);
+    res.json({ ok: true });
+  });
+
+  // --- Author/organization folders (admin file management) ---
+
+  // Destinations for "move course": every top-level folder that is not
+  // itself an ungrouped course, including empty ones.
+  router.get("/:id/authors", requireAdmin, (_req, res) => {
+    const library = res.locals.library as LibraryRow;
+    res.json(
+      listAuthorFolders(path.join(config.librariesRoot, library.root_path)),
+    );
+  });
+
+  router.post("/:id/authors", requireAdmin, (req, res) => {
+    const library = res.locals.library as LibraryRow;
+    const body = (req.body ?? {}) as Partial<CreateAuthorRequest>;
+    const name = typeof body.name === "string" ? body.name : "";
+    if (!isValidName(name)) {
+      res.status(400).json({ error: "invalid folder name" });
+      return;
+    }
+    const abs = path.join(config.librariesRoot, library.root_path, name);
+    if (fs.existsSync(abs)) {
+      res.status(409).json({ error: "folder already exists" });
+      return;
+    }
+    fs.mkdirSync(abs);
+    res.status(201).json({ ok: true });
+  });
+
+  // Rename an author folder. Courses underneath keep their ids — only
+  // their rel_path prefix changes — so progress is untouched. The exact
+  // match arm also covers renaming an ungrouped course folder.
+  router.patch("/:id/authors/:author", requireAdmin, (req, res) => {
+    const library = res.locals.library as LibraryRow;
+    const from = req.params.author as string;
+    const body = (req.body ?? {}) as Partial<RenameAuthorRequest>;
+    const to = typeof body.name === "string" ? body.name : "";
+    if (!isValidName(from) || !isValidName(to)) {
+      res.status(400).json({ error: "invalid folder name" });
+      return;
+    }
+    if (from === to) {
+      res.json({ ok: true });
+      return;
+    }
+    const libraryAbs = path.join(config.librariesRoot, library.root_path);
+    const fromAbs = path.join(libraryAbs, from);
+    const toAbs = path.join(libraryAbs, to);
+    if (!fs.existsSync(fromAbs) || !fs.statSync(fromAbs).isDirectory()) {
+      res.status(404).json({ error: "folder not found" });
+      return;
+    }
+    if (fs.existsSync(toAbs)) {
+      res.status(409).json({ error: "destination already exists" });
+      return;
+    }
+    try {
+      renameOnDiskThen(db, fromAbs, toAbs, () => {
+        db.prepare(
+          `UPDATE courses
+           SET rel_path = @to || substr(rel_path, @fromLen + 1),
+               name = CASE WHEN rel_path = @from THEN @to ELSE name END
+           WHERE library_id = @libraryId
+             AND (rel_path = @from
+                  OR substr(rel_path, 1, @fromLen + 1) = @from || '/')`,
+        ).run({ libraryId: library.id, from, to, fromLen: from.length });
+      });
+    } catch {
+      res.status(400).json({ error: "rename failed" });
+      return;
+    }
     res.json({ ok: true });
   });
 
