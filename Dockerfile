@@ -4,7 +4,7 @@
 # Build: install the workspace, build web + server, then produce a pruned
 # production install of the server (pnpm deploy) for the runtime stage.
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 # better-sqlite3 v13 has no prebuilt binaries; node-gyp compiles it from
 # source and needs a toolchain (build stage only — the compiled binding is
 # carried into the runtime stage via pnpm deploy).
@@ -32,7 +32,7 @@ RUN pnpm --filter @courseo/server --prod deploy --legacy /out/server
 # ---------------------------------------------------------------------------
 # Runtime: one image, one port — API + built web UI, no proxy required.
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     PORT=3000 \
     DATA_DIR=/data \
