@@ -20,6 +20,16 @@ type AuthState =
 
 export function App() {
   const [auth, setAuth] = useState<AuthState>({ phase: "loading" });
+  const [editMode, setEditMode] = useState(
+    () => localStorage.getItem("courseo.editMode") === "1",
+  );
+
+  function toggleEditMode() {
+    setEditMode((on) => {
+      localStorage.setItem("courseo.editMode", on ? "0" : "1");
+      return !on;
+    });
+  }
 
   useEffect(() => {
     (async () => {
@@ -65,6 +75,18 @@ export function App() {
             </Link>
             <span className="topbar-user">
               {auth.user.isAdmin && (
+                <button
+                  className={
+                    editMode ? "edit-toggle edit-toggle--on" : "edit-toggle"
+                  }
+                  onClick={toggleEditMode}
+                  title="Show rename/move controls"
+                  aria-pressed={editMode}
+                >
+                  ✎ Edit
+                </button>
+              )}
+              {auth.user.isAdmin && (
                 <Link className="topbar-link" to="/users">
                   Users
                 </Link>
@@ -82,11 +104,11 @@ export function App() {
               <Route path="/libraries" element={<Libraries user={auth.user} />} />
               <Route
                 path="/libraries/:libraryId"
-                element={<CourseBrowser user={auth.user} />}
+                element={<CourseBrowser user={auth.user} editMode={editMode} />}
               />
               <Route
                 path="/courses/:courseId"
-                element={<CourseView user={auth.user} />}
+                element={<CourseView user={auth.user} editMode={editMode} />}
               />
               <Route path="/courses/:courseId/lessons/*" element={<LessonView />} />
               <Route path="/account" element={<Account user={auth.user} />} />

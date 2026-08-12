@@ -11,7 +11,14 @@ import { FriendlyName } from "./FriendlyName.js";
 import { InlineRename } from "./InlineRename.js";
 import { ProgressIndicator } from "./ProgressIndicator.js";
 
-export function CourseBrowser({ user }: { user: User }) {
+export function CourseBrowser({
+  user,
+  editMode,
+}: {
+  user: User;
+  editMode: boolean;
+}) {
+  const canEdit = user.isAdmin && editMode;
   const libraryId = Number(useParams().libraryId);
   const [library, setLibrary] = useState<Library | null>(null);
   const [courses, setCourses] = useState<Course[] | null>(null);
@@ -73,7 +80,7 @@ export function CourseBrowser({ user }: { user: User }) {
       <div className="page-heading">
         <h2>{library.name}</h2>
         <span className="heading-actions">
-          {user.isAdmin && !addingAuthor && (
+          {canEdit && !addingAuthor && (
             <button
               className="link-button"
               onClick={() => setAddingAuthor(true)}
@@ -113,7 +120,7 @@ export function CourseBrowser({ user }: { user: User }) {
           {author && (
             <h3 className="course-group-title">
               {author}
-              {user.isAdmin && (
+              {canEdit && (
                 <InlineRename
                   name={author}
                   label={`Rename ${author}`}
@@ -140,7 +147,7 @@ export function CourseBrowser({ user }: { user: User }) {
                       />
                     )}
                   </Link>
-                  {user.isAdmin && (
+                  {canEdit && (
                     <button
                       className="link-button"
                       onClick={() =>
@@ -151,7 +158,7 @@ export function CourseBrowser({ user }: { user: User }) {
                     </button>
                   )}
                 </div>
-                {movingId === course.id && (
+                {canEdit && movingId === course.id && (
                   <CourseMover
                     course={course}
                     onDone={(moved) => {

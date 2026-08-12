@@ -14,7 +14,13 @@ import { InlineRename } from "./InlineRename.js";
 import { flattenLessons, lessonLink } from "./LessonView.js";
 import { ProgressIndicator } from "./ProgressIndicator.js";
 
-export function CourseView({ user }: { user: User }) {
+export function CourseView({
+  user,
+  editMode,
+}: {
+  user: User;
+  editMode: boolean;
+}) {
   const courseId = Number(useParams().courseId);
   const [tree, setTree] = useState<CourseTreeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +57,16 @@ export function CourseView({ user }: { user: User }) {
     });
   }, []);
 
-  const renameNode = user.isAdmin
-    ? async (node: CourseTreeNode, newName: string) => {
-        await api.courses.moveFile(courseId, {
-          from: node.path,
-          to: joinPath(parentPath(node.path), newName),
-        });
-        load();
-      }
-    : undefined;
+  const renameNode =
+    user.isAdmin && editMode
+      ? async (node: CourseTreeNode, newName: string) => {
+          await api.courses.moveFile(courseId, {
+            from: node.path,
+            to: joinPath(parentPath(node.path), newName),
+          });
+          load();
+        }
+      : undefined;
 
   if (error) return <p className="form-error">{error}</p>;
   if (!tree) return null;
