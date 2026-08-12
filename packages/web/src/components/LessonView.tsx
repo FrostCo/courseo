@@ -119,7 +119,7 @@ export function lessonLink(courseId: number, lesson: LessonNode): string {
   return `/courses/${courseId}/lessons/${encodePathForUrl(lesson.path)}`;
 }
 
-function flattenLessons(nodes: CourseTreeNode[]): LessonNode[] {
+export function flattenLessons(nodes: CourseTreeNode[]): LessonNode[] {
   const out: LessonNode[] = [];
   for (const node of nodes) {
     if (node.kind === "dir") out.push(...flattenLessons(node.children));

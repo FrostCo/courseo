@@ -5,11 +5,12 @@ import {
   parentPath,
   type CourseTreeNode,
   type CourseTreeResponse,
+  type LessonNode,
   type User,
 } from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
 import { InlineRename } from "./InlineRename.js";
-import { lessonLink } from "./LessonView.js";
+import { flattenLessons, lessonLink } from "./LessonView.js";
 import { ProgressIndicator } from "./ProgressIndicator.js";
 
 export function CourseView({ user }: { user: User }) {
@@ -32,6 +33,13 @@ export function CourseView({ user }: { user: User }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Default expansion: only the section you'd continue in is open.
+  useEffect(() => {
+    if (!tree) return;
+    const target = findContinueTarget(tree.children);
+    setExpanded(new Set(target ? ancestorDirs(target.lesson.path) : []));
+  }, [tree]);
 
   const toggleDir = useCallback((path: string) => {
     setExpanded((prev) => {
@@ -57,6 +65,7 @@ export function CourseView({ user }: { user: User }) {
 
   const dirPaths = collectDirPaths(tree.children);
   const allExpanded = dirPaths.length > 0 && dirPaths.every((p) => expanded.has(p));
+  const continueTarget = findContinueTarget(tree.children);
 
   return (
     <div className="page">
@@ -87,6 +96,20 @@ export function CourseView({ user }: { user: User }) {
         </span>
       </div>
 
+      {continueTarget && (
+        <div className="continue-bar">
+          <Link
+            className="primary-button continue-button"
+            to={lessonLink(courseId, continueTarget.lesson)}
+          >
+            {continueTarget.started ? "Continue" : "Start course"}
+          </Link>
+          <span className="continue-name" title={continueTarget.lesson.path}>
+            {continueTarget.lesson.name}
+          </span>
+        </div>
+      )}
+
       {tree.children.length === 0 ? (
         <p className="tagline">No lessons found in this course folder.</p>
       ) : (
@@ -100,6 +123,48 @@ export function CourseView({ user }: { user: User }) {
       )}
     </div>
   );
+}
+
+function ancestorDirs(path: string): string[] {
+  const parts = path.split("/");
+  const out: string[] = [];
+  for (let i = 1; i < parts.length; i++) {
+    out.push(parts.slice(0, i).join("/"));
+  }
+  return out;
+}
+
+/**
+ * Where the user should pick the course back up: the most recently touched
+ * lesson if it's unfinished, otherwise the next uncompleted lesson after
+ * it. Null when every lesson is complete (or the course is empty).
+ */
+function findContinueTarget(
+  nodes: CourseTreeNode[],
+): { lesson: LessonNode; started: boolean } | null {
+  const lessons = flattenLessons(nodes);
+  if (lessons.length === 0) return null;
+
+  let lastIndex = -1;
+  let lastTime = "";
+  lessons.forEach((lesson, i) => {
+    const time = lesson.progress?.updatedAt;
+    if (time && time > lastTime) {
+      lastTime = time;
+      lastIndex = i;
+    }
+  });
+  if (lastIndex === -1) return { lesson: lessons[0]!, started: false };
+
+  const last = lessons[lastIndex]!;
+  if (!last.progress?.completed) return { lesson: last, started: true };
+  for (let i = lastIndex + 1; i < lessons.length; i++) {
+    if (!lessons[i]!.progress?.completed) {
+      return { lesson: lessons[i]!, started: true };
+    }
+  }
+  const remaining = lessons.find((lesson) => !lesson.progress?.completed);
+  return remaining ? { lesson: remaining, started: true } : null;
 }
 
 function collectDirPaths(nodes: CourseTreeNode[]): string[] {
