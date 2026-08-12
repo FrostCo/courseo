@@ -82,6 +82,18 @@ export function Users({ user: currentUser }: { user: User }) {
           </li>
         ))}
       </ul>
+
+      <section className="backup-section">
+        <h3 className="course-group-title">Backup</h3>
+        <p className="tagline">
+          Download a consistent snapshot of the database — accounts, shares,
+          and everyone&apos;s progress. Course files aren&apos;t included;
+          they&apos;re plain files you back up separately.
+        </p>
+        <a className="primary-button backup-link" href="/api/backup">
+          Download backup
+        </a>
+      </section>
     </div>
   );
 }

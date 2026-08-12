@@ -692,6 +692,20 @@ body {
   max-width: 26rem;
 }
 
+.backup-section {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.backup-link {
+  align-self: start;
+  text-decoration: none;
+}
+
 /* File management (admin) */
 
 .heading-actions {

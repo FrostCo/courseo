@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import express, { type Express } from "express";
 import { authContext, authRouter, ssoAutoLogin, type SessionStore } from "./auth.js";
+import { backupRouter } from "./backup.js";
 import type { Config } from "./config.js";
 import { coursesRouter } from "./courses.js";
 import type { AppDatabase } from "./db.js";
@@ -45,6 +46,7 @@ export function createApp(
   }
 
   app.use("/api", authRouter(db, sessions, config));
+  app.use("/api/backup", backupRouter(db));
   app.use("/api/users", usersRouter(db, sessions));
   app.use("/api/libraries", librariesRouter(db, config));
   app.use("/api/courses", coursesRouter(db, config));
