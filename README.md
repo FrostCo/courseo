@@ -14,14 +14,12 @@ The name plays on *course(s)*; the "o" is for **Organizer** — or "**Own** your
 
 ## Features
 
-> Status: under construction — the scaffold is in place, features are landing.
-
 - **Multiple libraries** — several top-level content roots (e.g. Personal, Family), each holding many courses.
-- **Multi-user with sharing** — app-managed accounts; owners grant per-library `viewer`/`editor` access, enforced on every endpoint.
+- **Multi-user with sharing** — app-managed accounts; owners grant per-library `viewer`/`editor` access, enforced on every endpoint. Admins manage users from the UI; everyone can change their own password.
 - **Auto-scanned courses** — folders become navigable trees with lesson types detected by extension (video, audio, PDF, text/markdown, HTML, docs, quizzes).
-- **In-page viewers** — stream video/audio with seeking (HTTP range), render PDFs and text/markdown/HTML inline.
+- **In-page viewers** — stream video/audio with seeking (HTTP range) and `.vtt` subtitle tracks, render PDFs and text/markdown/HTML inline.
 - **Per-user progress** — playback position, completion, resume-where-you-left-off, per-course stats.
-- **In-UI file management** — move/rename files and folders; progress follows the files. (No upload or delete in v1.)
+- **In-UI file management** (admin) — create/rename author folders, move/rename courses across libraries, rename chapters and files; progress and subtitle sidecars follow the files. (No upload or delete in v1.)
 
 ## Quick start (Docker)
 
@@ -94,7 +92,3 @@ The monorepo has three workspace packages:
 - `packages/web` — React + Vite UI.
 
 See [`docs/spec.md`](docs/spec.md) for the full design (including the hard-won deployment gotchas in §6) and [`DEVELOPMENT.md`](DEVELOPMENT.md) for commit conventions.
-
-## License
-
-MIT
