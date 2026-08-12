@@ -10,6 +10,7 @@ import {
 import { api, ApiRequestError } from "../api.js";
 import { InlineRename } from "./InlineRename.js";
 import { lessonLink } from "./LessonView.js";
+import { ProgressIndicator } from "./ProgressIndicator.js";
 
 export function CourseView({ user }: { user: User }) {
   const courseId = Number(useParams().courseId);
@@ -69,10 +70,10 @@ export function CourseView({ user }: { user: User }) {
       <div className="page-heading">
         <h2>{tree.course.name}</h2>
         <span className="heading-actions">
-          <span className="tagline">
-            {tree.stats.completedLessons}/{tree.stats.totalLessons} lessons
-            completed
-          </span>
+          <ProgressIndicator
+            completed={tree.stats.completedLessons}
+            total={tree.stats.totalLessons}
+          />
           {dirPaths.length > 0 && (
             <button
               className="link-button"
@@ -111,6 +112,36 @@ function collectDirPaths(nodes: CourseTreeNode[]): string[] {
   return out;
 }
 
+function countLessons(nodes: CourseTreeNode[]): {
+  total: number;
+  completed: number;
+} {
+  let total = 0;
+  let completed = 0;
+  for (const node of nodes) {
+    if (node.kind === "dir") {
+      const counts = countLessons(node.children);
+      total += counts.total;
+      completed += counts.completed;
+    } else {
+      total += 1;
+      if (node.progress?.completed) completed += 1;
+    }
+  }
+  return { total, completed };
+}
+
+function SectionCount({ nodes }: { nodes: CourseTreeNode[] }) {
+  const { total, completed } = countLessons(nodes);
+  if (total === 0) return null;
+  const done = completed === total;
+  return (
+    <span className={done ? "tree-count tree-count--done" : "tree-count"}>
+      {completed}/{total}
+    </span>
+  );
+}
+
 function TreeLevel({
   nodes,
   courseId,
@@ -140,6 +171,7 @@ function TreeLevel({
                 </span>
                 {node.name}
               </button>
+              <SectionCount nodes={node.children} />
               {onRename && (
                 <InlineRename
                   name={node.name}

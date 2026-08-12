@@ -300,6 +300,17 @@ body {
   flex-shrink: 0;
 }
 
+.tree-count {
+  margin-left: 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.tree-count--done {
+  color: var(--accent);
+}
+
 .tree-lesson {
   display: flex;
   align-items: center;

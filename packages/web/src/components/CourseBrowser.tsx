@@ -8,6 +8,7 @@ import {
 } from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
 import { InlineRename } from "./InlineRename.js";
+import { ProgressIndicator } from "./ProgressIndicator.js";
 
 export function CourseBrowser({ user }: { user: User }) {
   const libraryId = Number(useParams().libraryId);
@@ -130,7 +131,7 @@ export function CourseBrowser({ user }: { user: User }) {
                   <Link className="course-card" to={`/courses/${course.id}`}>
                     <span className="course-name">{course.name}</span>
                     {course.stats && (
-                      <CourseProgress
+                      <ProgressIndicator
                         completed={course.stats.completedLessons}
                         total={course.stats.totalLessons}
                       />
@@ -328,23 +329,5 @@ function CourseMover({
         </button>
       </div>
     </form>
-  );
-}
-
-function CourseProgress({
-  completed,
-  total,
-}: {
-  completed: number;
-  total: number;
-}) {
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-  return (
-    <span className="course-progress">
-      <span className="progress-track">
-        <span className="progress-fill" style={{ width: `${percent}%` }} />
-      </span>
-      {completed}/{total}
-    </span>
   );
 }
