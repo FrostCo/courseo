@@ -185,7 +185,14 @@ export function librariesRouter(db: AppDatabase, config: Config): Router {
   const listLibraryCourses: RequestHandler = (req, res) => {
     const library = res.locals.library as LibraryRow;
     syncLibraryCourses(db, library, config.librariesRoot);
-    res.json(listCourses(db, library.id, req.user!.id));
+    res.json(
+      listCourses(
+        db,
+        library.id,
+        req.user!.id,
+        path.join(config.librariesRoot, library.root_path),
+      ),
+    );
   };
   router.get("/:id/courses", requireView, listLibraryCourses);
   router.post("/:id/rescan", requireView, listLibraryCourses);

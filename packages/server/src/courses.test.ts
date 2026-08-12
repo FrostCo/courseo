@@ -87,6 +87,18 @@ describe("course listing", () => {
     expect(after[0]!.id).toBe(before[0]!.id);
   });
 
+  it("reports a cover image when one exists in the course root", async () => {
+    fs.writeFileSync(
+      path.join(librariesRoot, "Personal/Jane Author/Course One/Cover.JPG"),
+      "img",
+    );
+    const courses = await getCourses(admin);
+    const courseOne = courses.find((c) => c.name === "Course One")!;
+    // Matched case-insensitively, reported with the on-disk name.
+    expect(courseOne.cover).toBe("Cover.JPG");
+    expect(courses.find((c) => c.name === "Course Two")!.cover).toBeUndefined();
+  });
+
   it("requires view access", async () => {
     await admin.post("/api/users", {
       username: "spouse",

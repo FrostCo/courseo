@@ -117,6 +117,11 @@ export interface Course {
   createdAt: string;
   /** Completion stats for the requesting user, merged in by the API. */
   stats?: CourseStats;
+  /**
+   * Cover image filename in the course root (cover.jpg/png/webp), if one
+   * exists; servable via the course files endpoint.
+   */
+  cover?: string;
 }
 
 export interface CourseStats {

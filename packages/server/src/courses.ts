@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { Router } from "express";
 import type {
@@ -60,11 +61,30 @@ export function syncLibraryCourses(
   })();
 }
 
+const COVER_NAMES = ["cover.jpg", "cover.jpeg", "cover.png", "cover.webp"];
+
+/** Cover image filename in the course root, matched case-insensitively. */
+function findCover(courseDir: string): string | undefined {
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(courseDir);
+  } catch {
+    return undefined;
+  }
+  const byLower = new Map(entries.map((entry) => [entry.toLowerCase(), entry]));
+  for (const name of COVER_NAMES) {
+    const hit = byLower.get(name);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 /** Course list with the given user's completion counts merged in. */
 export function listCourses(
   db: AppDatabase,
   libraryId: number,
   userId: number,
+  libraryDir: string,
 ): Course[] {
   const rows = db
     .prepare(
@@ -89,6 +109,7 @@ export function listCourses(
       totalLessons: row.total_lessons,
       completedLessons: Math.min(row.completed_count, row.total_lessons),
     },
+    cover: findCover(path.join(libraryDir, row.rel_path)),
   }));
 }
 

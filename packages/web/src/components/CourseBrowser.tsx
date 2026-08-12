@@ -6,10 +6,9 @@ import {
   type Library,
   type User,
 } from "@courseo/shared";
-import { api, ApiRequestError } from "../api.js";
+import { api, ApiRequestError, fileUrl } from "../api.js";
 import { FriendlyName } from "./FriendlyName.js";
 import { InlineRename } from "./InlineRename.js";
-import { ProgressIndicator } from "./ProgressIndicator.js";
 
 export function CourseBrowser({
   user,
@@ -132,32 +131,34 @@ export function CourseBrowser({
               )}
             </h3>
           )}
-          <ul className="course-list">
+          <ul className="course-grid">
             {groupCourses.map((course) => (
-              <li key={course.id}>
-                <div className="course-row">
-                  <Link className="course-card" to={`/courses/${course.id}`}>
-                    <span className="course-name">
-                      <FriendlyName name={course.name} />
-                    </span>
-                    {course.stats && (
-                      <ProgressIndicator
-                        completed={course.stats.completedLessons}
-                        total={course.stats.totalLessons}
-                      />
-                    )}
+              <li key={course.id} className="course-cell">
+                <CoursePoster course={course} />
+                <div className="course-cell-meta">
+                  <Link
+                    className="course-cell-name"
+                    to={`/courses/${course.id}`}
+                    title={course.name}
+                  >
+                    <FriendlyName name={course.name} />
                   </Link>
-                  {canEdit && (
-                    <button
-                      className="link-button"
-                      onClick={() =>
-                        setMovingId(movingId === course.id ? null : course.id)
-                      }
-                    >
-                      {movingId === course.id ? "Close" : "Move"}
-                    </button>
+                  {course.stats && course.stats.totalLessons > 0 && (
+                    <span className="course-cell-count">
+                      {course.stats.completedLessons}/{course.stats.totalLessons}
+                    </span>
                   )}
                 </div>
+                {canEdit && (
+                  <button
+                    className="link-button course-cell-move"
+                    onClick={() =>
+                      setMovingId(movingId === course.id ? null : course.id)
+                    }
+                  >
+                    {movingId === course.id ? "Close" : "Move"}
+                  </button>
+                )}
                 {canEdit && movingId === course.id && (
                   <CourseMover
                     course={course}
@@ -174,6 +175,58 @@ export function CourseBrowser({
       ))}
     </div>
   );
+}
+
+/**
+ * Movie-style poster: the course's cover image when one exists
+ * (cover.jpg/png/webp in the course root), otherwise a colored tile with
+ * the course name. A thin bar at the bottom shows progress once started.
+ */
+function CoursePoster({ course }: { course: Course }) {
+  const percent =
+    course.stats && course.stats.totalLessons > 0
+      ? Math.round(
+          (course.stats.completedLessons / course.stats.totalLessons) * 100,
+        )
+      : 0;
+  return (
+    <Link
+      className="poster-card"
+      to={`/courses/${course.id}`}
+      style={course.cover ? undefined : { background: posterColor(course.name) }}
+    >
+      {course.cover ? (
+        <img
+          className="poster-img"
+          src={fileUrl(course.id, course.cover)}
+          alt=""
+          loading="lazy"
+        />
+      ) : (
+        <span className="poster-title">
+          <FriendlyName name={course.name} />
+        </span>
+      )}
+      {percent > 0 && (
+        <span className="poster-progress-track">
+          <span
+            className="poster-progress-fill"
+            style={{ width: `${percent}%` }}
+          />
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** Stable per-course tile color derived from the name. */
+function posterColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  const hue = hash % 360;
+  return `linear-gradient(160deg, hsl(${hue} 45% 32%), hsl(${hue} 50% 20%))`;
 }
 
 function AddAuthor({
