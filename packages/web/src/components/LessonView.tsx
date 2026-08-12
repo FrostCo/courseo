@@ -67,7 +67,7 @@ export function LessonView() {
   const next = index < lessons.length - 1 ? lessons[index + 1] : undefined;
 
   return (
-    <div className="page">
+    <div className="page page--lesson">
       <nav className="breadcrumbs">
         <Link to="/libraries">Libraries</Link>
         <span>/</span>

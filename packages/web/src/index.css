@@ -98,6 +98,11 @@ body {
   padding: 1.5rem;
 }
 
+/* Lesson pages get a wider column so viewers have room to breathe. */
+.content:has(.page--lesson) {
+  max-width: 80rem;
+}
+
 .page-heading {
   display: flex;
   align-items: center;
@@ -718,7 +723,9 @@ h3:hover > .icon-button,
 
 .doc-frame {
   width: 100%;
-  height: 75vh;
+  /* Fill the viewport below the topbar/breadcrumbs/heading. */
+  height: calc(100vh - 16rem);
+  min-height: 30rem;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--panel);
