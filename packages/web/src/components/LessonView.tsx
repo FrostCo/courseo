@@ -8,6 +8,7 @@ import {
   type LessonNode,
 } from "@courseo/shared";
 import { api, ApiRequestError, fileUrl } from "../api.js";
+import { FriendlyName } from "./FriendlyName.js";
 import { MediaPlayer } from "./viewers/MediaPlayer.js";
 import { TextViewer } from "./viewers/TextViewer.js";
 
@@ -74,11 +75,15 @@ export function LessonView() {
         <span>/</span>
         <Link to={`/courses/${tree.course.id}`}>{tree.course.name}</Link>
         <span>/</span>
-        <span>{lesson.name}</span>
+        <span>
+          <FriendlyName name={lesson.name} file />
+        </span>
       </nav>
 
       <div className="page-heading">
-        <h2 className="lesson-title">{lesson.name}</h2>
+        <h2 className="lesson-title">
+          <FriendlyName name={lesson.name} file />
+        </h2>
         <button
           className={completed ? "primary-button" : "secondary-button"}
           onClick={() => setCompletion(!completed)}
@@ -98,14 +103,14 @@ export function LessonView() {
       <nav className="lesson-nav">
         {prev ? (
           <Link to={lessonLink(courseId, prev)} title={prev.path}>
-            ← {prev.name}
+            ← <FriendlyName name={prev.name} file />
           </Link>
         ) : (
           <span />
         )}
         {next ? (
           <Link to={lessonLink(courseId, next)} title={next.path}>
-            {next.name} →
+            <FriendlyName name={next.name} file /> →
           </Link>
         ) : (
           <span />

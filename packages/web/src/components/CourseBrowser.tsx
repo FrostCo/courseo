@@ -7,6 +7,7 @@ import {
   type User,
 } from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
+import { FriendlyName } from "./FriendlyName.js";
 import { InlineRename } from "./InlineRename.js";
 import { ProgressIndicator } from "./ProgressIndicator.js";
 
@@ -129,7 +130,9 @@ export function CourseBrowser({ user }: { user: User }) {
               <li key={course.id}>
                 <div className="course-row">
                   <Link className="course-card" to={`/courses/${course.id}`}>
-                    <span className="course-name">{course.name}</span>
+                    <span className="course-name">
+                      <FriendlyName name={course.name} />
+                    </span>
                     {course.stats && (
                       <ProgressIndicator
                         completed={course.stats.completedLessons}

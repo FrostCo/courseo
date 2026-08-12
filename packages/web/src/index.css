@@ -332,6 +332,16 @@ body {
   white-space: nowrap;
 }
 
+/* Ordering prefix ("01-Name") rendered as a styled number, no dash. */
+.name-ordinal {
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--muted);
+  font-size: 0.85em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .tree-lesson {
   display: flex;
   align-items: center;

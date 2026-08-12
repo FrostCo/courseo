@@ -9,6 +9,7 @@ import {
   type User,
 } from "@courseo/shared";
 import { api, ApiRequestError } from "../api.js";
+import { FriendlyName } from "./FriendlyName.js";
 import { InlineRename } from "./InlineRename.js";
 import { flattenLessons, lessonLink } from "./LessonView.js";
 import { ProgressIndicator } from "./ProgressIndicator.js";
@@ -105,7 +106,7 @@ export function CourseView({ user }: { user: User }) {
             {continueTarget.started ? "Continue" : "Start course"}
           </Link>
           <span className="continue-name" title={continueTarget.lesson.path}>
-            {continueTarget.lesson.name}
+            <FriendlyName name={continueTarget.lesson.name} file />
           </span>
         </div>
       )}
@@ -234,7 +235,7 @@ function TreeLevel({
                 <span className="tree-chevron" aria-hidden>
                   {expanded.has(node.path) ? "▾" : "▸"}
                 </span>
-                {node.name}
+                <FriendlyName name={node.name} />
               </button>
               <SectionCount nodes={node.children} />
               {onRename && (
@@ -265,7 +266,7 @@ function TreeLevel({
               to={lessonLink(courseId, node)}
               title={node.path}
             >
-              {node.name}
+              <FriendlyName name={node.name} file />
             </Link>
             {onRename && (
               <InlineRename
