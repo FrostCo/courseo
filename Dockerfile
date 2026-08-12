@@ -24,7 +24,10 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 COPY tsconfig.base.json ./
 COPY packages ./packages
 RUN pnpm --recursive build
-RUN pnpm --filter @courseo/server --prod deploy /out/server
+# --legacy: copy the project + its workspace deps as-is; the default
+# pnpm v10+ deploy mode requires inject-workspace-packages, which we
+# don't need for a single deployable server.
+RUN pnpm --filter @courseo/server --prod deploy --legacy /out/server
 
 # ---------------------------------------------------------------------------
 # Runtime: one image, one port — API + built web UI, no proxy required.
