@@ -5,6 +5,12 @@
 # production install of the server (pnpm deploy) for the runtime stage.
 # ---------------------------------------------------------------------------
 FROM node:22-bookworm-slim AS build
+# better-sqlite3 v13 has no prebuilt binaries; node-gyp compiles it from
+# source and needs a toolchain (build stage only — the compiled binding is
+# carried into the runtime stage via pnpm deploy).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /app
 
