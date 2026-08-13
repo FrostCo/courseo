@@ -830,6 +830,43 @@ h3:hover > .icon-button,
   background: var(--panel);
 }
 
+.viewer-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.viewer-toolbar a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.viewer-toolbar a:hover {
+  color: var(--accent);
+}
+
+/* pdf.js fallback viewer (no native inline PDF support, e.g. Android). */
+.pdf-viewer {
+  height: calc(100vh - 16rem);
+  min-height: 30rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 0.75rem;
+}
+
+.pdf-page {
+  margin: 0 auto 0.75rem;
+}
+
+.pdf-page canvas {
+  display: block;
+  border-radius: 4px;
+  background: #fff;
+}
+
 .text-viewer {
   padding: 1.25rem 1.5rem;
   border: 1px solid var(--border);

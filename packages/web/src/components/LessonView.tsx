@@ -10,6 +10,7 @@ import {
 import { api, ApiRequestError, fileUrl } from "../api.js";
 import { FriendlyName } from "./FriendlyName.js";
 import { MediaPlayer } from "./viewers/MediaPlayer.js";
+import { PdfViewer } from "./viewers/PdfViewer.js";
 import { TextViewer } from "./viewers/TextViewer.js";
 
 export function LessonView() {
@@ -185,10 +186,7 @@ function Viewer({
         />
       );
     case "pdf":
-      // Native viewer in an iframe — never fetch-as-text (spec §6.5);
-      // works because files are served with application/pdf and our own
-      // origin allows same-origin framing (§6.3/§6.4).
-      return <iframe className="doc-frame" src={src} title={lesson.name} />;
+      return <PdfLesson src={src} title={lesson.name} />;
     case "html":
       return <iframe className="doc-frame" src={src} title={lesson.name} />;
     case "text":
@@ -206,6 +204,29 @@ function Viewer({
         </p>
       );
   }
+}
+
+function PdfLesson({ src, title }: { src: string; title: string }) {
+  // Native viewer in an iframe when the browser has one — never
+  // fetch-as-text (spec §6.5); works because files are served with
+  // application/pdf and our own origin allows same-origin framing
+  // (§6.3/§6.4). Android Chrome has no inline viewer (it renders a
+  // download button instead), so fall back to pdf.js there.
+  const nativeViewer = navigator.pdfViewerEnabled !== false;
+  return (
+    <>
+      <div className="viewer-toolbar">
+        <a href={src} target="_blank" rel="noreferrer">
+          Open in new tab ↗
+        </a>
+      </div>
+      {nativeViewer ? (
+        <iframe className="doc-frame" src={src} title={title} />
+      ) : (
+        <PdfViewer src={src} />
+      )}
+    </>
+  );
 }
 
 function subtitleLabel(subtitlePath: string): string {
