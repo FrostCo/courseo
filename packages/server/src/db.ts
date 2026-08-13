@@ -75,6 +75,13 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE courses ADD COLUMN total_lessons INTEGER NOT NULL DEFAULT 0;
   `,
+
+  // 003 — courses whose directory vanished are marked missing instead of
+  // deleted, so an unmounted volume or out-of-band rename can't cascade
+  // away progress. NULL = present on disk.
+  `
+  ALTER TABLE courses ADD COLUMN missing_since TEXT;
+  `,
 ];
 
 export type AppDatabase = Database.Database;

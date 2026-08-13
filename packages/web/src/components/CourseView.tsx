@@ -139,6 +139,14 @@ export function CourseView({
         </span>
       </div>
 
+      {tree.course.missing && (
+        <p className="missing-banner">
+          This course&apos;s folder is missing on disk (unmounted drive,
+          renamed or removed outside Courseo). Your progress is kept and the
+          course will come back when the folder does.
+        </p>
+      )}
+
       {continueTarget && (
         <div className="continue-bar">
           <Link

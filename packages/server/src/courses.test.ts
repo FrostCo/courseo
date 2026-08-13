@@ -64,7 +64,7 @@ describe("course listing", () => {
     });
   });
 
-  it("keeps course ids stable across rescans and drops removed dirs", async () => {
+  it("keeps course ids stable across rescans and marks removed dirs missing", async () => {
     const before = await getCourses(admin);
     fs.rmSync(path.join(librariesRoot, "Personal/Jane Author/Course Two"), {
       recursive: true,
@@ -80,9 +80,10 @@ describe("course listing", () => {
 
     const res = await admin.post(`/api/libraries/${library.id}/rescan`);
     const after = (await res.json()) as Course[];
-    expect(after.map((c) => c.relPath)).toEqual([
-      "Jane Author/Course One",
-      "New Org/Course Three",
+    expect(after.map((c) => [c.relPath, c.missing ?? false])).toEqual([
+      ["Jane Author/Course One", false],
+      ["Jane Author/Course Two", true],
+      ["New Org/Course Three", false],
     ]);
     expect(after[0]!.id).toBe(before[0]!.id);
   });

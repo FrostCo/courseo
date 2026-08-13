@@ -56,8 +56,27 @@ export function CourseBrowser({
     }
   }
 
+  async function handlePurgeMissing() {
+    if (
+      !window.confirm(
+        "Delete the records of all missing courses in this library? " +
+          "Progress for them will be lost. Files on disk are not touched.",
+      )
+    ) {
+      return;
+    }
+    try {
+      await api.libraries.purgeMissing(libraryId);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "purge failed");
+    }
+  }
+
   if (error) return <p className="form-error">{error}</p>;
   if (!library || !courses) return null;
+
+  const missingCount = courses.filter((c) => c.missing).length;
 
   // Group by the author/organization folder; ungrouped courses sit at the
   // library root.
@@ -85,6 +104,14 @@ export function CourseBrowser({
               onClick={() => setAddingAuthor(true)}
             >
               New author
+            </button>
+          )}
+          {canEdit && missingCount > 0 && (
+            <button
+              className="link-button link-button--danger"
+              onClick={handlePurgeMissing}
+            >
+              Purge missing ({missingCount})
             </button>
           )}
           <button
@@ -143,13 +170,18 @@ export function CourseBrowser({
                   >
                     <FriendlyName name={course.name} />
                   </Link>
-                  {course.stats && course.stats.totalLessons > 0 && (
-                    <span className="course-cell-count">
-                      {course.stats.completedLessons}/{course.stats.totalLessons}
-                    </span>
+                  {course.missing ? (
+                    <span className="missing-badge">missing</span>
+                  ) : (
+                    course.stats &&
+                    course.stats.totalLessons > 0 && (
+                      <span className="course-cell-count">
+                        {course.stats.completedLessons}/{course.stats.totalLessons}
+                      </span>
+                    )
                   )}
                 </div>
-                {canEdit && (
+                {canEdit && !course.missing && (
                   <button
                     className="link-button course-cell-move"
                     onClick={() =>
@@ -157,6 +189,32 @@ export function CourseBrowser({
                     }
                   >
                     {movingId === course.id ? "Close" : "Move"}
+                  </button>
+                )}
+                {canEdit && course.missing && (
+                  <button
+                    className="link-button link-button--danger course-cell-move"
+                    onClick={async () => {
+                      if (
+                        !window.confirm(
+                          `Delete the record of "${course.name}"? Progress for it will be lost.`,
+                        )
+                      ) {
+                        return;
+                      }
+                      try {
+                        await api.courses.purge(course.id);
+                        await load();
+                      } catch (err) {
+                        setError(
+                          err instanceof ApiRequestError
+                            ? err.message
+                            : "purge failed",
+                        );
+                      }
+                    }}
+                  >
+                    Purge
                   </button>
                 )}
                 {canEdit && movingId === course.id && (
@@ -191,7 +249,9 @@ function CoursePoster({ course }: { course: Course }) {
       : 0;
   return (
     <Link
-      className="poster-card"
+      className={
+        course.missing ? "poster-card poster-card--missing" : "poster-card"
+      }
       to={`/courses/${course.id}`}
       style={course.cover ? undefined : { background: posterColor(course.name) }}
     >

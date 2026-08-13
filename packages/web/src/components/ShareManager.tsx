@@ -18,6 +18,7 @@ export function ShareManager({
   const [addUserId, setAddUserId] = useState("");
   const [addRole, setAddRole] = useState<ShareRole>("viewer");
   const [name, setName] = useState(library.name);
+  const [folderName, setFolderName] = useState(library.rootPath);
   const [error, setError] = useState<string | null>(null);
 
   const reloadShares = useCallback(async () => {
@@ -60,7 +61,7 @@ export function ShareManager({
           disabled={name.trim() === "" || name === library.name}
           onClick={() =>
             run(async () => {
-              await api.libraries.rename(library.id, name.trim());
+              await api.libraries.update(library.id, { name: name.trim() });
               await onChanged();
             })
           }
@@ -68,6 +69,34 @@ export function ShareManager({
           Rename
         </button>
       </div>
+
+      {currentUser.isAdmin && (
+        <div className="panel-row">
+          <label className="grow">
+            Folder (on disk)
+            <input
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+            />
+          </label>
+          <button
+            className="primary-button"
+            disabled={
+              folderName.trim() === "" || folderName === library.rootPath
+            }
+            onClick={() =>
+              run(async () => {
+                await api.libraries.update(library.id, {
+                  folderName: folderName.trim(),
+                });
+                await onChanged();
+              })
+            }
+          >
+            Rename folder
+          </button>
+        </div>
+      )}
 
       <h3>Sharing</h3>
       {shares && shares.length === 0 && (

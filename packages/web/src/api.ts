@@ -18,6 +18,7 @@ import {
   type ProgressUpdateRequest,
   type SetupRequest,
   type SetupStatus,
+  type UpdateLibraryRequest,
   type UpdateUserRequest,
   type User,
 } from "@courseo/shared";
@@ -92,9 +93,11 @@ export const api = {
     rescan: (id: number) => post<Course[]>(`/api/libraries/${id}/rescan`),
     availableRoots: () => request<string[]>("/api/libraries/roots"),
     create: (body: CreateLibraryRequest) => post<Library>("/api/libraries", body),
-    rename: (id: number, name: string) =>
-      patch<Library>(`/api/libraries/${id}`, { name }),
+    update: (id: number, body: UpdateLibraryRequest) =>
+      patch<Library>(`/api/libraries/${id}`, body),
     remove: (id: number) => del<{ ok: true }>(`/api/libraries/${id}`),
+    purgeMissing: (id: number) =>
+      post<{ purged: number }>(`/api/libraries/${id}/purge-missing`),
     shares: (id: number) => request<LibraryShare[]>(`/api/libraries/${id}/shares`),
     share: (id: number, body: CreateShareRequest) =>
       post<{ ok: true }>(`/api/libraries/${id}/shares`, body),
@@ -115,6 +118,7 @@ export const api = {
       post<Course>(`/api/courses/${id}/move`, body),
     moveFile: (id: number, body: MoveRequest) =>
       post<{ ok: true }>(`/api/courses/${id}/files/move`, body),
+    purge: (id: number) => del<{ ok: true }>(`/api/courses/${id}`),
   },
   progress: {
     update: (body: ProgressUpdateRequest) =>

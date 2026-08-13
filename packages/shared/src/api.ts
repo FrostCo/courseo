@@ -87,7 +87,14 @@ export interface CreateLibraryRequest {
 }
 
 export interface UpdateLibraryRequest {
+  /** Display name shown in the UI; never touches the filesystem. */
   name?: string;
+  /**
+   * New on-disk folder name for the library root (admin only). Renames
+   * the directory and updates the stored root path in one transaction;
+   * course paths and progress keys are relative, so they are unaffected.
+   */
+  folderName?: string;
 }
 
 export interface LibraryShare {
@@ -122,6 +129,13 @@ export interface Course {
    * exists; servable via the course files endpoint.
    */
   cover?: string;
+  /**
+   * True when the course folder has vanished from disk (unmounted volume,
+   * out-of-band rename/delete). The record and everyone's progress are
+   * kept; the flag clears automatically if the folder reappears, or an
+   * admin can purge the record.
+   */
+  missing?: boolean;
 }
 
 export interface CourseStats {

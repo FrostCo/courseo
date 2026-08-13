@@ -200,17 +200,86 @@ export function librariesRouter(db: AppDatabase, config: Config): Router {
   router.patch("/:id", requireManage, (req, res) => {
     const library = res.locals.library as LibraryRow;
     const body = (req.body ?? {}) as Partial<UpdateLibraryRequest>;
-    const name = typeof body.name === "string" ? body.name.trim() : "";
-    if (name.length === 0 || name.length > 128) {
+    if (body.name === undefined && body.folderName === undefined) {
+      res.status(400).json({ error: "nothing to update" });
+      return;
+    }
+
+    // Validate the display name up front so a failure can't strand a
+    // half-applied request after the folder rename below.
+    const name =
+      body.name === undefined
+        ? undefined
+        : typeof body.name === "string"
+          ? body.name.trim()
+          : "";
+    if (name !== undefined && (name.length === 0 || name.length > 128)) {
       res.status(400).json({ error: "invalid library name" });
       return;
     }
-    db.prepare("UPDATE libraries SET name = ? WHERE id = ?").run(
-      name,
-      library.id,
-    );
+
+    // Renaming the on-disk folder is a file operation → admin only, like
+    // all other file management. root_path updates in the same
+    // transaction as the rename; course paths and progress keys are
+    // relative to the library root, so they are unaffected.
+    if (body.folderName !== undefined) {
+      const folderName = typeof body.folderName === "string" ? body.folderName : "";
+      if (!req.user!.isAdmin) {
+        res.status(403).json({ error: "admin required to rename the folder" });
+        return;
+      }
+      if (!isValidName(folderName)) {
+        res.status(400).json({ error: "invalid folder name" });
+        return;
+      }
+      if (folderName !== library.root_path) {
+        const fromAbs = path.join(config.librariesRoot, library.root_path);
+        const toAbs = path.join(config.librariesRoot, folderName);
+        if (!fs.existsSync(fromAbs) || !fs.statSync(fromAbs).isDirectory()) {
+          res.status(409).json({
+            error: "library folder not found on disk; fix the mount first",
+          });
+          return;
+        }
+        if (fs.existsSync(toAbs)) {
+          res.status(409).json({ error: "destination folder already exists" });
+          return;
+        }
+        try {
+          renameOnDiskThen(db, fromAbs, toAbs, () => {
+            db.prepare("UPDATE libraries SET root_path = ? WHERE id = ?").run(
+              folderName,
+              library.id,
+            );
+          });
+        } catch {
+          res.status(400).json({ error: "folder rename failed" });
+          return;
+        }
+      }
+    }
+
+    if (name !== undefined) {
+      db.prepare("UPDATE libraries SET name = ? WHERE id = ?").run(
+        name,
+        library.id,
+      );
+    }
+
     const row = getLibraryRow(db, library.id)!;
     res.json(toLibrary(row, getLibraryAccess(db, req.user!, row) ?? "owner"));
+  });
+
+  // Delete all missing-course records in this library (admin): cleanup
+  // for content that is gone for good. Cascades their progress rows.
+  router.post("/:id/purge-missing", requireAdmin, (_req, res) => {
+    const library = res.locals.library as LibraryRow;
+    const result = db
+      .prepare(
+        "DELETE FROM courses WHERE library_id = ? AND missing_since IS NOT NULL",
+      )
+      .run(library.id);
+    res.json({ purged: result.changes });
   });
 
   // Unregisters the library (cascades shares/courses/progress rows).

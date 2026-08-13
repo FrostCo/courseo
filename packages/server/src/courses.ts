@@ -7,7 +7,7 @@ import type {
   CourseTreeResponse,
   LessonProgress,
 } from "@courseo/shared";
-import { requireAuth } from "./auth.js";
+import { requireAdmin, requireAuth } from "./auth.js";
 import type { Config } from "./config.js";
 import type { AppDatabase } from "./db.js";
 import { getLibraryAccess, getLibraryRow, type LibraryRow } from "./permissions.js";
@@ -19,20 +19,35 @@ export interface CourseRow {
   rel_path: string;
   name: string;
   total_lessons: number;
+  missing_since: string | null;
   created_at: string;
 }
 
 /**
- * Sync the courses table with what's on disk: new directories appear,
- * missing ones are removed (cascading their progress — the content is
- * gone), and surviving rows keep their ids so progress sticks.
+ * Sync the courses table with what's on disk: new directories appear and
+ * surviving rows keep their ids so progress sticks. A course directory
+ * that vanished is marked missing — never deleted, since deletion would
+ * cascade everyone's progress and "vanished" is often temporary (an
+ * unmounted volume, an out-of-band rename). The mark clears when the
+ * directory reappears; admins purge records that are gone for good.
  */
 export function syncLibraryCourses(
   db: AppDatabase,
   library: LibraryRow,
   librariesRoot: string,
 ): void {
-  const scanned = scanLibraryCourses(path.join(librariesRoot, library.root_path));
+  const rootAbs = path.join(librariesRoot, library.root_path);
+  // A missing/unreadable library root means the storage isn't there at
+  // all — skip the sync entirely rather than marking everything missing.
+  let rootIsDirectory = false;
+  try {
+    rootIsDirectory = fs.statSync(rootAbs).isDirectory();
+  } catch {
+    // stat failed: not mounted / renamed / permissions
+  }
+  if (!rootIsDirectory) return;
+
+  const scanned = scanLibraryCourses(rootAbs);
   db.transaction(() => {
     const existing = db
       .prepare("SELECT id, rel_path FROM courses WHERE library_id = ?")
@@ -44,7 +59,9 @@ export function syncLibraryCourses(
       const current = existingByRel.get(course.relPath);
       if (current) {
         db.prepare(
-          "UPDATE courses SET name = ?, total_lessons = ? WHERE id = ?",
+          `UPDATE courses
+           SET name = ?, total_lessons = ?, missing_since = NULL
+           WHERE id = ?`,
         ).run(course.name, course.totalLessons, current.id);
       } else {
         db.prepare(
@@ -53,10 +70,13 @@ export function syncLibraryCourses(
         ).run(library.id, course.relPath, course.name, course.totalLessons);
       }
     }
+    const markMissing = db.prepare(
+      `UPDATE courses
+       SET missing_since = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE id = ? AND missing_since IS NULL`,
+    );
     for (const course of existing) {
-      if (!seen.has(course.rel_path)) {
-        db.prepare("DELETE FROM courses WHERE id = ?").run(course.id);
-      }
+      if (!seen.has(course.rel_path)) markMissing.run(course.id);
     }
   })();
 }
@@ -110,6 +130,7 @@ export function listCourses(
       completedLessons: Math.min(row.completed_count, row.total_lessons),
     },
     cover: findCover(path.join(libraryDir, row.rel_path)),
+    missing: row.missing_since !== null || undefined,
   }));
 }
 
@@ -172,12 +193,32 @@ export function coursesRouter(db: AppDatabase, config: Config): Router {
         relPath: course.rel_path,
         name: course.name,
         createdAt: course.created_at,
+        missing: course.missing_since !== null || undefined,
       },
       library: { id: library.id, name: library.name },
       children: tree.children,
       stats: { totalLessons: tree.totalLessons, completedLessons },
     };
     res.json(response);
+  });
+
+  // Purge a missing course record (admin): deletes the row and cascades
+  // progress. Refused while the folder still exists — this is cleanup for
+  // content that is gone for good, not a course-delete feature.
+  router.delete("/:id", requireAdmin, (req, res) => {
+    const course = db
+      .prepare("SELECT * FROM courses WHERE id = ?")
+      .get(Number(req.params.id)) as CourseRow | undefined;
+    if (!course) {
+      res.status(404).json({ error: "course not found" });
+      return;
+    }
+    if (course.missing_since === null) {
+      res.status(409).json({ error: "course is not missing on disk" });
+      return;
+    }
+    db.prepare("DELETE FROM courses WHERE id = ?").run(course.id);
+    res.json({ ok: true });
   });
 
   return router;
