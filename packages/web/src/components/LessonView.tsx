@@ -10,7 +10,6 @@ import {
 import { api, ApiRequestError, fileUrl } from "../api.js";
 import { FriendlyName } from "./FriendlyName.js";
 import { MediaPlayer } from "./viewers/MediaPlayer.js";
-import { PdfViewer } from "./viewers/PdfViewer.js";
 import { TextViewer } from "./viewers/TextViewer.js";
 
 export function LessonView() {
@@ -210,9 +209,26 @@ function PdfLesson({ src, title }: { src: string; title: string }) {
   // Native viewer in an iframe when the browser has one — never
   // fetch-as-text (spec §6.5); works because files are served with
   // application/pdf and our own origin allows same-origin framing
-  // (§6.3/§6.4). Android Chrome has no inline viewer (it renders a
-  // download button instead), so fall back to pdf.js there.
-  const nativeViewer = navigator.pdfViewerEnabled !== false;
+  // (§6.3/§6.4). Android Chrome has no inline viewer (an iframe shows a
+  // download button instead), so offer a new-tab prompt there — the
+  // device's own PDF viewer beats anything we'd embed.
+  if (navigator.pdfViewerEnabled === false) {
+    return (
+      <div className="pdf-fallback">
+        <p className="tagline">
+          This browser can&apos;t display PDFs in the page.
+        </p>
+        <a
+          className="primary-button"
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open <FriendlyName name={title} file /> ↗
+        </a>
+      </div>
+    );
+  }
   return (
     <>
       <div className="viewer-toolbar">
@@ -220,11 +236,7 @@ function PdfLesson({ src, title }: { src: string; title: string }) {
           Open in new tab ↗
         </a>
       </div>
-      {nativeViewer ? (
-        <iframe className="doc-frame" src={src} title={title} />
-      ) : (
-        <PdfViewer src={src} />
-      )}
+      <iframe className="doc-frame" src={src} title={title} />
     </>
   );
 }
