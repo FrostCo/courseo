@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { splitOrderingPrefix, stripExtension } from "./display-names.js";
+import {
+  replaceUnderscores,
+  splitOrderingPrefix,
+  stripExtension,
+} from "./display-names.js";
 
 describe("splitOrderingPrefix", () => {
   it("splits dash-style prefixes and trims leading zeros", () => {
@@ -44,5 +48,21 @@ describe("stripExtension", () => {
   it("keeps names without extensions or with nothing before the dot", () => {
     expect(stripExtension("no-extension")).toBe("no-extension");
     expect(stripExtension(".hidden")).toBe(".hidden");
+  });
+});
+
+describe("replaceUnderscores", () => {
+  it("turns underscore separators into spaces", () => {
+    expect(replaceUnderscores("Getting_Started_Guide")).toBe(
+      "Getting Started Guide",
+    );
+    expect(replaceUnderscores("double__underscore")).toBe(
+      "double underscore",
+    );
+  });
+
+  it("leaves normal names and degenerate cases alone", () => {
+    expect(replaceUnderscores("Getting Started")).toBe("Getting Started");
+    expect(replaceUnderscores("___")).toBe("___");
   });
 });

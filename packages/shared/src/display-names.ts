@@ -26,3 +26,12 @@ export function stripExtension(name: string): string {
   const stripped = name.replace(/\.[a-z0-9]{1,5}$/i, "");
   return stripped === "" ? name : stripped;
 }
+
+/**
+ * Turn underscore word separators into spaces for display
+ * ("Getting_Started_Guide" → "Getting Started Guide").
+ */
+export function replaceUnderscores(name: string): string {
+  const replaced = name.replace(/_+/g, " ").trim();
+  return replaced === "" ? name : replaced;
+}
