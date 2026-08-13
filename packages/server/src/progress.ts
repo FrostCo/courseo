@@ -3,6 +3,8 @@ import path from "node:path";
 import { Router } from "express";
 import {
   isSafeRelPath,
+  type BulkProgressRequest,
+  type BulkProgressResponse,
   type LessonProgress,
   type ProgressUpdateRequest,
 } from "@courseo/shared";
@@ -102,6 +104,73 @@ export function progressRouter(db: AppDatabase, config: Config): Router {
       updatedAt: row.updated_at,
     };
     res.json(progress);
+  });
+
+  // Bulk completion for "mark section complete" — one transaction instead
+  // of a request per lesson. Completion-only; positions are untouched.
+  router.put("/bulk", (req, res) => {
+    const body = (req.body ?? {}) as Partial<BulkProgressRequest>;
+    const { courseId, lessonPaths, completed } = body;
+    if (
+      typeof courseId !== "number" ||
+      typeof completed !== "boolean" ||
+      !Array.isArray(lessonPaths) ||
+      lessonPaths.length === 0 ||
+      lessonPaths.length > 1000 ||
+      !lessonPaths.every(
+        (p) => typeof p === "string" && isSafeRelPath(p),
+      )
+    ) {
+      res.status(400).json({ error: "invalid bulk progress payload" });
+      return;
+    }
+
+    const course = db
+      .prepare("SELECT * FROM courses WHERE id = ?")
+      .get(courseId) as CourseRow | undefined;
+    if (!course) {
+      res.status(404).json({ error: "course not found" });
+      return;
+    }
+    const library = getLibraryRow(db, course.library_id)!;
+    if (getLibraryAccess(db, req.user!, library) === null) {
+      res.status(403).json({ error: "no access to this library" });
+      return;
+    }
+
+    const courseDir = path.join(
+      config.librariesRoot,
+      library.root_path,
+      course.rel_path,
+    );
+    const updatedAt = new Date().toISOString();
+    const upsert = db.prepare(
+      `INSERT INTO progress (user_id, course_id, lesson_path, completed, position_seconds, updated_at)
+       VALUES (@userId, @courseId, @lessonPath, @completed, 0, @updatedAt)
+       ON CONFLICT (user_id, course_id, lesson_path) DO UPDATE SET
+         completed = @completed,
+         updated_at = @updatedAt`,
+    );
+    let updated = 0;
+    db.transaction(() => {
+      for (const lessonPath of lessonPaths) {
+        // Skip stale paths (e.g. a rescan raced the click) instead of
+        // failing the whole batch — same "keys reference real content"
+        // rule as the single-lesson endpoint.
+        if (!fs.existsSync(path.join(courseDir, lessonPath))) continue;
+        upsert.run({
+          userId: req.user!.id,
+          courseId,
+          lessonPath,
+          completed: completed ? 1 : 0,
+          updatedAt,
+        });
+        updated += 1;
+      }
+    })();
+
+    const response: BulkProgressResponse = { updated };
+    res.json(response);
   });
 
   return router;

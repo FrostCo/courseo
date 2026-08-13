@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   joinPath,
   parentPath,
   type CourseTreeNode,
   type CourseTreeResponse,
+  type DirectoryNode,
   type LessonNode,
   type User,
 } from "@courseo/shared";
@@ -41,12 +42,16 @@ export function CourseView({
     load();
   }, [load]);
 
-  // Default expansion: only the section you'd continue in is open.
+  // Default expansion: only the section you'd continue in is open. Applied
+  // once per course, so reloads (rename, checkbox toggles) don't clobber
+  // the user's expand/collapse state.
+  const expansionInitFor = useRef<number | null>(null);
   useEffect(() => {
-    if (!tree) return;
+    if (!tree || expansionInitFor.current === courseId) return;
+    expansionInitFor.current = courseId;
     const target = findContinueTarget(tree.children);
     setExpanded(new Set(target ? ancestorDirs(target.lesson.path) : []));
-  }, [tree]);
+  }, [tree, courseId]);
 
   const toggleDir = useCallback((path: string) => {
     setExpanded((prev) => {
@@ -67,6 +72,36 @@ export function CourseView({
           load();
         }
       : undefined;
+
+  const setLessonCompleted = useCallback(
+    async (node: LessonNode, completed: boolean) => {
+      try {
+        await api.progress.update({
+          courseId,
+          lessonPath: node.path,
+          completed,
+        });
+      } catch {
+        // fall through to reload, which shows the real state
+      }
+      load();
+    },
+    [courseId, load],
+  );
+
+  const setSectionCompleted = useCallback(
+    async (dir: DirectoryNode, completed: boolean) => {
+      const lessonPaths = flattenLessons(dir.children).map((l) => l.path);
+      if (lessonPaths.length === 0) return;
+      try {
+        await api.progress.bulk({ courseId, lessonPaths, completed });
+      } catch {
+        // fall through to reload, which shows the real state
+      }
+      load();
+    },
+    [courseId, load],
+  );
 
   if (error) return <p className="form-error">{error}</p>;
   if (!tree) return null;
@@ -127,6 +162,8 @@ export function CourseView({
           expanded={expanded}
           onToggle={toggleDir}
           onRename={renameNode}
+          onSetLesson={setLessonCompleted}
+          onSetSection={setSectionCompleted}
         />
       )}
     </div>
@@ -204,14 +241,39 @@ function countLessons(nodes: CourseTreeNode[]): {
   return { total, completed };
 }
 
-function SectionCount({ nodes }: { nodes: CourseTreeNode[] }) {
-  const { total, completed } = countLessons(nodes);
-  if (total === 0) return null;
-  const done = completed === total;
+/**
+ * Tri-state section checkbox: checked when every lesson underneath is
+ * complete, indeterminate when some are. Checking completes the whole
+ * section; unchecking clears it.
+ */
+function SectionCheckbox({
+  name,
+  completed,
+  total,
+  onSet,
+}: {
+  name: string;
+  completed: number;
+  total: number;
+  onSet: (completed: boolean) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = completed > 0 && completed < total;
+    }
+  }, [completed, total]);
   return (
-    <span className={done ? "tree-count tree-count--done" : "tree-count"}>
-      {completed}/{total}
-    </span>
+    <input
+      ref={ref}
+      type="checkbox"
+      className="tree-check"
+      checked={total > 0 && completed === total}
+      onChange={(e) => onSet(e.target.checked)}
+      aria-label={`Mark section ${name} ${
+        total > 0 && completed === total ? "not complete" : "complete"
+      }`}
+    />
   );
 }
 
@@ -221,50 +283,86 @@ function TreeLevel({
   expanded,
   onToggle,
   onRename,
+  onSetLesson,
+  onSetSection,
 }: {
   nodes: CourseTreeNode[];
   courseId: number;
   expanded: ReadonlySet<string>;
   onToggle: (path: string) => void;
   onRename?: (node: CourseTreeNode, newName: string) => Promise<void>;
+  onSetLesson: (node: LessonNode, completed: boolean) => void;
+  onSetSection: (node: DirectoryNode, completed: boolean) => void;
 }) {
   return (
     <ul className="tree">
-      {nodes.map((node) =>
-        node.kind === "dir" ? (
-          <li key={node.path} className="tree-dir">
-            <span className="tree-dir-name">
-              <button
-                className="tree-toggle"
-                aria-expanded={expanded.has(node.path)}
-                onClick={() => onToggle(node.path)}
-              >
-                <span className="tree-chevron" aria-hidden>
-                  {expanded.has(node.path) ? "▾" : "▸"}
-                </span>
-                <FriendlyName name={node.name} />
-              </button>
-              <SectionCount nodes={node.children} />
-              {onRename && (
-                <InlineRename
+      {nodes.map((node) => {
+        if (node.kind === "dir") {
+          const counts = countLessons(node.children);
+          return (
+            <li key={node.path} className="tree-dir">
+              <span className="tree-dir-name">
+                <SectionCheckbox
                   name={node.name}
-                  label={`Rename ${node.name}`}
-                  onRename={(newName) => onRename(node, newName)}
+                  completed={counts.completed}
+                  total={counts.total}
+                  onSet={(completed) => onSetSection(node, completed)}
+                />
+                <button
+                  className="tree-toggle"
+                  aria-expanded={expanded.has(node.path)}
+                  onClick={() => onToggle(node.path)}
+                >
+                  <span className="tree-chevron" aria-hidden>
+                    {expanded.has(node.path) ? "▾" : "▸"}
+                  </span>
+                  <FriendlyName name={node.name} />
+                </button>
+                {counts.total > 0 && (
+                  <span
+                    className={
+                      counts.completed === counts.total
+                        ? "tree-count tree-count--done"
+                        : "tree-count"
+                    }
+                  >
+                    {counts.completed}/{counts.total}
+                  </span>
+                )}
+                {onRename && (
+                  <InlineRename
+                    name={node.name}
+                    label={`Rename ${node.name}`}
+                    onRename={(newName) => onRename(node, newName)}
+                  />
+                )}
+              </span>
+              {expanded.has(node.path) && (
+                <TreeLevel
+                  nodes={node.children}
+                  courseId={courseId}
+                  expanded={expanded}
+                  onToggle={onToggle}
+                  onRename={onRename}
+                  onSetLesson={onSetLesson}
+                  onSetSection={onSetSection}
                 />
               )}
-            </span>
-            {expanded.has(node.path) && (
-              <TreeLevel
-                nodes={node.children}
-                courseId={courseId}
-                expanded={expanded}
-                onToggle={onToggle}
-                onRename={onRename}
-              />
-            )}
-          </li>
-        ) : (
+            </li>
+          );
+        }
+        const completed = node.progress?.completed ?? false;
+        return (
           <li key={node.path} className="tree-lesson">
+            <input
+              type="checkbox"
+              className="tree-check"
+              checked={completed}
+              onChange={(e) => onSetLesson(node, e.target.checked)}
+              aria-label={`Mark ${node.name} ${
+                completed ? "not complete" : "complete"
+              }`}
+            />
             <span className={`type-badge type-badge--${node.type}`}>
               {node.type}
             </span>
@@ -285,14 +383,9 @@ function TreeLevel({
             {node.subtitles && (
               <span className="tree-subtle">cc</span>
             )}
-            {node.progress?.completed && (
-              <span className="tree-done" title="completed">
-                done
-              </span>
-            )}
           </li>
-        ),
-      )}
+        );
+      })}
     </ul>
   );
 }

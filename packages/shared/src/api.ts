@@ -179,6 +179,21 @@ export interface ProgressUpdateRequest {
   positionSeconds?: number;
 }
 
+/**
+ * PUT /api/progress/bulk — set completion for many lessons at once
+ * ("mark section complete"). Completion-only: playback positions are
+ * untouched, and paths whose files no longer exist are skipped.
+ */
+export interface BulkProgressRequest {
+  courseId: number;
+  lessonPaths: string[];
+  completed: boolean;
+}
+
+export interface BulkProgressResponse {
+  updated: number;
+}
+
 // ---------------------------------------------------------------------------
 // File management (admin only)
 // ---------------------------------------------------------------------------

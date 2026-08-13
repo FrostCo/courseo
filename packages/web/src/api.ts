@@ -1,6 +1,8 @@
 import {
   encodePathForUrl,
   type ApiError,
+  type BulkProgressRequest,
+  type BulkProgressResponse,
   type ChangePasswordRequest,
   type Course,
   type CourseTreeResponse,
@@ -117,6 +119,12 @@ export const api = {
   progress: {
     update: (body: ProgressUpdateRequest) =>
       request<LessonProgress>("/api/progress", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    bulk: (body: BulkProgressRequest) =>
+      request<BulkProgressResponse>("/api/progress/bulk", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
