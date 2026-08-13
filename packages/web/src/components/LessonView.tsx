@@ -179,6 +179,7 @@ function Viewer({
             }))}
           initialPosition={lesson.progress?.positionSeconds ?? 0}
           completed={completed}
+          rateStorageKey={`courseo.rate.${courseId}`}
           onPosition={onPosition}
           onComplete={onComplete}
         />

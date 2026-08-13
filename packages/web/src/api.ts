@@ -122,6 +122,9 @@ export const api = {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
+        // Position saves fire on pagehide too; keepalive lets the tiny
+        // payload survive tab close and navigation.
+        keepalive: true,
       }),
     bulk: (body: BulkProgressRequest) =>
       request<BulkProgressResponse>("/api/progress/bulk", {
