@@ -80,6 +80,10 @@ export function LessonView() {
         </span>
       </nav>
 
+      <Link className="back-link" to={`/courses/${tree.course.id}`}>
+        ← Back to <FriendlyName name={tree.course.name} />
+      </Link>
+
       <div className="page-heading">
         <h2 className="lesson-title">
           <FriendlyName name={lesson.name} file />
