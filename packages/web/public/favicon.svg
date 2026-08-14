@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Courseo mark: the wordmark's "C" + accent "o", drawn as geometry so
+       it stays crisp at 16px with no font dependency. -->
+  <rect width="32" height="32" rx="7" fill="#171d23"/>
+  <path d="M 19.14 22.13 A 8 8 0 1 1 19.14 9.87"
+        fill="none" stroke="#e8edf2" stroke-width="3.6" stroke-linecap="round"/>
+  <circle cx="23" cy="20.5" r="4.2"
+          fill="none" stroke="#4cc38a" stroke-width="3.2"/>
+</svg>
