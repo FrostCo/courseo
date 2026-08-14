@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Full-bleed source for home-screen icons (manifest icon-192/512 and
+       apple-touch-icon). Unlike public/favicon.svg it has no rounded
+       corners: Android maskable icons and iOS apply their own mask, so the
+       background fills the canvas and the mark is scaled to ~72% to sit
+       inside the maskable safe zone (inner 80% circle).
+
+       Re-render after edits:
+         pnpm dlx sharp-cli -i icons/appicon.svg -o public/icon-512.png resize 512 512
+         pnpm dlx sharp-cli -i icons/appicon.svg -o public/icon-192.png resize 192 192
+         pnpm dlx sharp-cli -i icons/appicon.svg -o public/apple-touch-icon.png resize 180 180
+  -->
+  <rect width="512" height="512" fill="#171d23"/>
+  <g transform="scale(16) translate(16 16) scale(0.72) translate(-16 -16)">
+    <path d="M 18.24 22.78 A 8 8 0 1 1 19.14 9.87"
+          fill="none" stroke="#e8edf2" stroke-width="3.6" stroke-linecap="round"/>
+    <circle cx="23" cy="20.5" r="4.2"
+            fill="none" stroke="#4cc38a" stroke-width="3.2"/>
+  </g>
+</svg>
