@@ -388,7 +388,8 @@ function TreeLevel({
                 onRename={(newName) => onRename(node, newName)}
               />
             )}
-            {node.subtitles && (
+            {/* Audio can't render captions, so no cc badge there. */}
+            {node.subtitles && node.type !== "audio" && (
               <span className="tree-subtle">cc</span>
             )}
           </li>

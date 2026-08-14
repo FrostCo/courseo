@@ -245,6 +245,31 @@ describe("in-course file/folder move", () => {
     expect(dir.sort()).toEqual(["lecture.en.vtt", "lecture.mp4"]);
   });
 
+  it("leaves the sidecar with the video when renaming a same-name audio file", async () => {
+    const introDir = path.join(
+      librariesRoot,
+      "Personal/Jane/Course One/01 Intro",
+    );
+    fs.writeFileSync(path.join(introDir, "video.mp3"), "a");
+    await move("01 Intro/video.mp3", "01 Intro/talk.mp3");
+    const dir = fs.readdirSync(introDir);
+    expect(dir.sort()).toEqual(["talk.mp3", "video.en.vtt", "video.mp4"]);
+  });
+
+  it("moves the sidecar with an audio file that has no matching video", async () => {
+    const introDir = path.join(
+      librariesRoot,
+      "Personal/Jane/Course One/01 Intro",
+    );
+    fs.writeFileSync(path.join(introDir, "podcast.mp3"), "a");
+    fs.writeFileSync(path.join(introDir, "podcast.srt"), "s");
+    await move("01 Intro/podcast.mp3", "01 Intro/interview.mp3");
+    const dir = fs.readdirSync(introDir);
+    expect(dir).toContain("interview.mp3");
+    expect(dir).toContain("interview.srt");
+    expect(dir).not.toContain("podcast.srt");
+  });
+
   it("renames a folder and remaps progress keys by prefix", async () => {
     await admin.request("/api/progress", {
       method: "PUT",

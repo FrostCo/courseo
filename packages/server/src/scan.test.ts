@@ -118,6 +118,27 @@ describe("scanCourseTree", () => {
     ]);
   });
 
+  it("gives the sidecar to the video when audio shares its basename", () => {
+    makeTree(["c/course.mp4", "c/course.mp3", "c/course.srt"]);
+    const tree = scanCourseTree(path.join(root, "c"));
+    const byName = new Map(tree.children.map((n) => [n.name, n]));
+    expect(byName.get("course.mp4")).toMatchObject({
+      subtitles: ["course.srt"],
+    });
+    expect(byName.get("course.mp3")).not.toHaveProperty("subtitles");
+  });
+
+  it("still attaches subtitles to audio without a matching video", () => {
+    makeTree(["c/podcast.mp3", "c/podcast.srt"]);
+    const tree = scanCourseTree(path.join(root, "c"));
+    expect(tree.children).toEqual([
+      expect.objectContaining({
+        name: "podcast.mp3",
+        subtitles: ["podcast.srt"],
+      }),
+    ]);
+  });
+
   it("does not attach a subtitle to a lesson that is merely a name prefix", () => {
     makeTree(["c/1.mp4", "c/1.1.mp4", "c/1.1.srt"]);
     const tree = scanCourseTree(path.join(root, "c"));

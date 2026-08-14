@@ -283,6 +283,20 @@ function findSidecars(
   } catch {
     return [];
   }
+  // Sidecars belong to the video when the same lecture also exists as
+  // audio ("course.mp4" + "course.mp3" + "course.srt"): renaming the
+  // audio file must not steal the video's subtitles.
+  const renamingAudio = detectLessonType(fromFileName) === "audio";
+  if (
+    renamingAudio &&
+    entries.some(
+      (entry) =>
+        detectLessonType(entry) === "video" &&
+        stripExtension(entry) === oldBase,
+    )
+  ) {
+    return [];
+  }
   return entries
     .filter((entry) => isSubtitleSidecarFor(entry, oldBase))
     .map((entry) => ({

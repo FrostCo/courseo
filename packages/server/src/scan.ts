@@ -128,6 +128,13 @@ function scanDir(absDir: string, relDir: string): ScannedTree {
     subtitleFiles
       .filter((s) => isSubtitleSidecarFor(s, lessonBase))
       .map((s) => joinPath(relDir, s));
+  // When the same lecture exists as both video and audio ("course.mp4" +
+  // "course.mp3"), the sidecar belongs to the video, not to both.
+  const videoBases = new Set(
+    files
+      .filter((f) => detectLessonType(f) === "video")
+      .map((f) => stripExtension(f)),
+  );
 
   const nodes: CourseTreeNode[] = [];
   let totalLessons = 0;
@@ -154,8 +161,9 @@ function scanDir(absDir: string, relDir: string): ScannedTree {
       path: joinPath(relDir, file),
       type,
     };
-    if (type === "video" || type === "audio") {
-      const subtitles = subtitlesFor(stripExtension(file));
+    const base = stripExtension(file);
+    if (type === "video" || (type === "audio" && !videoBases.has(base))) {
+      const subtitles = subtitlesFor(base);
       if (subtitles.length > 0) lesson.subtitles = subtitles;
     }
     nodes.push(lesson);
