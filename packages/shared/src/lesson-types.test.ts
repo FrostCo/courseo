@@ -3,6 +3,7 @@ import {
   detectLessonType,
   fileExtension,
   isSubtitleFile,
+  isSubtitleSidecarFor,
 } from "./lesson-types.js";
 
 describe("fileExtension", () => {
@@ -76,5 +77,35 @@ describe("isSubtitleFile", () => {
     expect(isSubtitleFile("captions.srt")).toBe(true);
     expect(isSubtitleFile("captions.VTT")).toBe(true);
     expect(isSubtitleFile("lesson.mp4")).toBe(false);
+  });
+});
+
+describe("isSubtitleSidecarFor", () => {
+  it("matches the exact basename", () => {
+    expect(isSubtitleSidecarFor("video.srt", "video")).toBe(true);
+    expect(isSubtitleSidecarFor("video.vtt", "video")).toBe(true);
+  });
+
+  it("matches a language-tagged basename", () => {
+    expect(isSubtitleSidecarFor("video.en.srt", "video")).toBe(true);
+    expect(isSubtitleSidecarFor("video.eng.vtt", "video")).toBe(true);
+    expect(isSubtitleSidecarFor("video.en-US.srt", "video")).toBe(true);
+  });
+
+  it("rejects bare name prefixes (dotted numbering)", () => {
+    expect(isSubtitleSidecarFor("1.1.srt", "1")).toBe(false);
+    expect(isSubtitleSidecarFor("1.1.srt", "1.1")).toBe(true);
+    expect(isSubtitleSidecarFor("Lesson 2.5 Bonus.srt", "Lesson 2")).toBe(
+      false,
+    );
+  });
+
+  it("rejects non-language suffixes and other names", () => {
+    expect(isSubtitleSidecarFor("video.backup.srt", "video")).toBe(false);
+    expect(isSubtitleSidecarFor("other.srt", "video")).toBe(false);
+  });
+
+  it("rejects non-subtitle files", () => {
+    expect(isSubtitleSidecarFor("video.mp4", "video")).toBe(false);
   });
 });

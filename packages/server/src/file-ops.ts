@@ -5,7 +5,7 @@ import {
   baseName,
   detectLessonType,
   isSafeRelPath,
-  isSubtitleFile,
+  isSubtitleSidecarFor,
   isValidName,
   parentPath,
   type Course,
@@ -284,11 +284,7 @@ function findSidecars(
     return [];
   }
   return entries
-    .filter((entry) => {
-      if (!isSubtitleFile(entry)) return false;
-      const base = stripExtension(entry);
-      return base === oldBase || base.startsWith(oldBase + ".");
-    })
+    .filter((entry) => isSubtitleSidecarFor(entry, oldBase))
     .map((entry) => ({
       abs: path.join(dirAbs, entry),
       newName: newBase + entry.slice(oldBase.length),

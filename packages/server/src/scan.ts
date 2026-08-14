@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   detectLessonType,
   isSubtitleFile,
+  isSubtitleSidecarFor,
   joinPath,
   type CourseTreeNode,
   type LessonNode,
@@ -125,10 +126,7 @@ function scanDir(absDir: string, relDir: string): ScannedTree {
   /** "video.srt" and "video.en.srt" both attach to "video.mp4". */
   const subtitlesFor = (lessonBase: string): string[] =>
     subtitleFiles
-      .filter((s) => {
-        const base = stripExtension(s);
-        return base === lessonBase || base.startsWith(lessonBase + ".");
-      })
+      .filter((s) => isSubtitleSidecarFor(s, lessonBase))
       .map((s) => joinPath(relDir, s));
 
   const nodes: CourseTreeNode[] = [];

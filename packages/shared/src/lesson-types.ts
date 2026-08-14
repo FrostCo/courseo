@@ -43,6 +43,28 @@ export function isSubtitleFile(filename: string): boolean {
   return SUBTITLE_EXTENSIONS.has(fileExtension(filename));
 }
 
+/** "en", "eng", "en-US" — the tags the player's track labels understand. */
+const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z]{2,4})?$/i;
+
+/**
+ * True when a subtitle file is a sidecar for the lesson with the given
+ * basename (extension already stripped): either the same basename
+ * ("video.srt" for "video.mp4") or basename plus a language tag
+ * ("video.en.srt", "video.en-US.srt"). A bare name prefix is NOT enough —
+ * "1.1.srt" belongs to "1.1.mp4", not to "1.mp4".
+ */
+export function isSubtitleSidecarFor(
+  subtitleFilename: string,
+  lessonBase: string,
+): boolean {
+  if (!isSubtitleFile(subtitleFilename)) return false;
+  const dot = subtitleFilename.lastIndexOf(".");
+  const base = dot > 0 ? subtitleFilename.slice(0, dot) : subtitleFilename;
+  if (base === lessonBase) return true;
+  if (!base.startsWith(lessonBase + ".")) return false;
+  return LANGUAGE_TAG.test(base.slice(lessonBase.length + 1));
+}
+
 /**
  * Detect the lesson type for a filename, or null when the file is not a
  * lesson at all (unknown extension, or a subtitle sidecar).

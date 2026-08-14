@@ -118,6 +118,14 @@ describe("scanCourseTree", () => {
     ]);
   });
 
+  it("does not attach a subtitle to a lesson that is merely a name prefix", () => {
+    makeTree(["c/1.mp4", "c/1.1.mp4", "c/1.1.srt"]);
+    const tree = scanCourseTree(path.join(root, "c"));
+    const byName = new Map(tree.children.map((n) => [n.name, n]));
+    expect(byName.get("1.mp4")).not.toHaveProperty("subtitles");
+    expect(byName.get("1.1.mp4")).toMatchObject({ subtitles: ["1.1.srt"] });
+  });
+
   it("skips unknown extensions and prunes empty directories", () => {
     makeTree([
       "c/resources/data.zip",
